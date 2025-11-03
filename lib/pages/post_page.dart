@@ -22,22 +22,14 @@ class PostPage extends StatefulWidget {
 }
 
 class _PostPageState extends State<PostPage> {
-  late final DatabaseProvider listeningProvider;
-  late final DatabaseProvider databaseProvider;
+  late final DatabaseProvider databaseProvider = Provider.of<DatabaseProvider>(context, listen: false);
 
   final TextEditingController _commentController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    // access provider after context is available
-    listeningProvider = Provider.of<DatabaseProvider>(context, listen: true);
-    databaseProvider = Provider.of<DatabaseProvider>(context, listen: false);
-
-    // load comments for this post
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      databaseProvider.loadComments(widget.post.id);
-    });
+    databaseProvider.loadComments(widget.post.id);
   }
 
   @override
@@ -48,8 +40,6 @@ class _PostPageState extends State<PostPage> {
 
   @override
   Widget build(BuildContext context) {
-    final allComments = listeningProvider.getComments(widget.post.id);
-
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
@@ -60,28 +50,40 @@ class _PostPageState extends State<PostPage> {
           // Post tile
           MyPostTile(
             post: widget.post,
-            onUserTap: () => goUserPage(context, widget.post.uid),
+            onUserTap: () => goUserPage(context, widget.post.userId),
             onPostTap: () {},
           ),
 
-          const Divider(),
+          const Divider(
+            color: Colors.transparent,
+          ),
 
           // Comment list
           Expanded(
-            child: allComments.isEmpty
-                ? Center(
-              child: Text(
-                "No comments yet...",
-                style: TextStyle(color: Theme.of(context).colorScheme.primary),
-              ),
-            )
-                : ListView.builder(
-              itemCount: allComments.length,
-              itemBuilder: (context, index) {
-                final comment = allComments[index];
-                return MyCommentTile(
-                  comment: comment,
-                  onUserTap: () => goUserPage(context, comment.uid),
+            child: Consumer<DatabaseProvider>(
+              builder: (context, listeningProvider, _) {
+                final allComments =
+                listeningProvider.getComments(widget.post.id);
+
+                if (allComments.isEmpty) {
+                  return Center(
+                    child: Text(
+                      "No comments yet...",
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary),
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  itemCount: allComments.length,
+                  itemBuilder: (context, index) {
+                    final comment = allComments[index];
+                    return MyCommentTile(
+                      comment: comment,
+                      onUserTap: () => goUserPage(context, comment.userId),
+                    );
+                  },
                 );
               },
             ),
@@ -103,12 +105,14 @@ class _PostPageState extends State<PostPage> {
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
                     ),
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.send, color: Theme.of(context).colorScheme.primary),
+                  icon: Icon(Icons.send,
+                      color: Theme.of(context).colorScheme.primary),
                   onPressed: () async {
                     final text = _commentController.text.trim();
                     if (text.isEmpty) return;

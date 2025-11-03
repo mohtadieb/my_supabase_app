@@ -65,7 +65,7 @@ class MyUserTile extends StatelessWidget {
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ProfilePage(uid: user.id),
+            builder: (context) => ProfilePage(userId: user.id),
           ),
         ),
       ),

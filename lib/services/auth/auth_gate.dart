@@ -17,16 +17,19 @@ class AuthGate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final supabase = Supabase.instance.client;
+    final _auth = Supabase.instance.client.auth;
 
     return StreamBuilder<AuthState>(
-      stream: supabase.auth.onAuthStateChange,
+      stream: _auth.onAuthStateChange,
       builder: (context, _) {
-        final session = supabase.auth.currentSession;
+        final session = _auth.currentSession;
 
         // Choose which screen to show
         final Widget currentScreen = session != null
+            // User logged in
             ? const MainLayout()
+
+            // User not logged in
             : const LoginOrRegister();
 
         // Wrap with AnimatedSwitcher for a smooth fade transition

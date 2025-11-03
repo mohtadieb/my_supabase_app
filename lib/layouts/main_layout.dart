@@ -22,10 +22,10 @@ class _MainLayoutState extends State<MainLayout> {
   @override
   void initState() {
     super.initState();
-    final currentUid = _auth.getCurrentUid();
+    _auth.getCurrentUserId();
     _pages = [
       const HomePage(),
-      ProfilePage(uid: currentUid), // dynamic current user
+      ProfilePage(userId: _auth.getCurrentUserId()), // dynamic current user
       const SearchPage(),
       SettingsPage(),
     ];

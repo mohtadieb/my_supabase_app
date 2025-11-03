@@ -1,13 +1,14 @@
 /*
-COMMENT MODEL (Supabase Version)
+COMMENT MODEL (Supabase Version, using `userId` instead of `uid`)
 
 This model defines what every comment should have in the Supabase setup.
+It aligns with your `profiles.id` as the foreign key for the commenting user.
 */
 
 class Comment {
   final String id;
   final String postId;
-  final String uid;
+  final String userId; // ✅ Renamed from uid -> userId (matches profiles.id)
   final String name;
   final String username;
   final String message;
@@ -16,7 +17,7 @@ class Comment {
   Comment({
     required this.id,
     required this.postId,
-    required this.uid,
+    required this.userId,
     required this.name,
     required this.username,
     required this.message,
@@ -26,9 +27,9 @@ class Comment {
   // Supabase -> App
   factory Comment.fromMap(Map<String, dynamic> data) {
     return Comment(
-      id: data['id'].toString(),
+      id: data['id']?.toString() ?? '',
       postId: data['post_id'] ?? '',
-      uid: data['uid'] ?? '',
+      userId: data['user_id'] ?? '', // ✅ changed key name
       name: data['name'] ?? '',
       username: data['username'] ?? '',
       message: data['message'] ?? '',
@@ -40,7 +41,7 @@ class Comment {
   Map<String, dynamic> toMap() {
     return {
       'post_id': postId,
-      'uid': uid,
+      'user_id': userId, // ✅ changed key name
       'name': name,
       'username': username,
       'message': message,
@@ -52,7 +53,7 @@ class Comment {
   Comment copyWith({
     String? id,
     String? postId,
-    String? uid,
+    String? userId, // ✅ updated param name
     String? name,
     String? username,
     String? message,
@@ -61,7 +62,7 @@ class Comment {
     return Comment(
       id: id ?? this.id,
       postId: postId ?? this.postId,
-      uid: uid ?? this.uid,
+      userId: userId ?? this.userId,
       name: name ?? this.name,
       username: username ?? this.username,
       message: message ?? this.message,

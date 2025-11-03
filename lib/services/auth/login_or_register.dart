@@ -26,7 +26,7 @@ class LoginOrRegister extends StatefulWidget {
 }
 
 class _LoginOrRegisterState extends State<LoginOrRegister> {
-  // Track whether the login page should be shown
+  // Initially show login page
   bool showLoginPage = true;
 
   /// Toggle between LoginPage and RegisterPage.

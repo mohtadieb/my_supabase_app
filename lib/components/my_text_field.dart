@@ -31,18 +31,23 @@ class MyTextField extends StatelessWidget {
       controller: controller,
       obscureText: obscureText,
       decoration: InputDecoration(
+
+        // Border when unselected
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Theme.of(context).colorScheme.tertiary),
+        ),
+
+        // Border when selected
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Theme.of(context).colorScheme.primary),
+        ),
+
         filled: true,
         fillColor: Theme.of(context).colorScheme.secondary,
         hintText: hintText,
         hintStyle: TextStyle(color: Theme.of(context).colorScheme.primary),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Theme.of(context).colorScheme.tertiary),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Theme.of(context).colorScheme.primary),
-        ),
       ),
     );
   }

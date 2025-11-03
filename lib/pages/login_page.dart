@@ -14,7 +14,6 @@ Features:
 - Loading overlay while logging in
 - Automatic session detection by AuthGate
 - Toggle to RegisterPage
-- No yellow overflow line during loading
 */
 
 class LoginPage extends StatefulWidget {
@@ -27,33 +26,36 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final AuthService _authService = AuthService(); // Auth logic
+  // Access AuthService
+  final AuthService _auth = AuthService();
+
+  // Text Controllers
   final TextEditingController emailController = TextEditingController();
   final TextEditingController pwController = TextEditingController();
-
-  bool _isLoading = false; // Track overlay visibility
 
   /// Handles login with AuthService
   Future<void> login() async {
     showLoadingCircle(context, message: "Logging in...");
     try {
       // Use AuthService to login
-      await _authService.loginEmailPassword(
+      await _auth.loginEmailPassword(
         emailController.text.trim(),
         pwController.text.trim(),
       );
-
       // Success — AuthGate handles navigation
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Logged in successfully!')),
         );
+        hideLoadingCircle(context);
       }
+
     } catch (e) {
-      // Show error dialog if login fails
-      if (mounted) showErrorDialog(e.toString());
-    } finally {
-      hideLoadingCircle(context);
+      if (mounted) {
+        hideLoadingCircle(context);
+        // Show error dialog if login fails
+        showErrorDialog(e.toString());
+      }
     }
   }
 
@@ -78,48 +80,67 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // Main login UI
+
+        // SCAFFOLD
         Scaffold(
           backgroundColor: Theme.of(context).colorScheme.surface,
           body: SafeArea(
             child: Center(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 25),
+                padding: const EdgeInsets.symmetric(horizontal: 28),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   // Prevents full-height overflow
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const SizedBox(height: 50),
+
+                    const SizedBox(height: 56),
+
+                    // Logo
                     Icon(
                       Icons.lock,
                       size: 70,
                       color: Theme.of(context).colorScheme.primary,
                     ),
-                    const SizedBox(height: 50),
+
+                    const SizedBox(height: 56),
+
+                    // Welcome back message
                     Text(
                       "Welcome back! Login to your account",
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.primary,
-                        fontSize: 16,
+                        fontSize: 14,
                       ),
                       textAlign: TextAlign.center,
                     ),
+
                     const SizedBox(height: 25),
+
+                    // Email text field
                     MyTextField(
                       controller: emailController,
                       hintText: "Enter email",
                       obscureText: false,
                     ),
-                    const SizedBox(height: 10),
+
+                    const SizedBox(height: 7),
+
+                    // Password text field
                     MyTextField(
                       controller: pwController,
                       hintText: "Enter password",
                       obscureText: true,
                     ),
-                    const SizedBox(height: 25),
+
+                    const SizedBox(height: 28),
+
+                    // Login button
                     MyButton(text: "Login", onTap: login),
-                    const SizedBox(height: 50),
+
+                    const SizedBox(height: 56),
+
+                    // Register message
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -129,7 +150,10 @@ class _LoginPageState extends State<LoginPage> {
                             color: Theme.of(context).colorScheme.primary,
                           ),
                         ),
-                        const SizedBox(width: 5),
+
+                        const SizedBox(width: 7),
+
+                        // Press to go to register page
                         GestureDetector(
                           onTap: widget.onTap,
                           child: Text(
@@ -142,7 +166,6 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 30),
                   ],
                 ),
               ),

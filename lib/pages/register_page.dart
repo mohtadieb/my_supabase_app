@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:my_supabase_app/components/my_loading_circle.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:my_supabase_app/services/database/database_service.dart';
 import '../components/my_button.dart';
 import '../components/my_text_field.dart';
 import '../services/auth/auth_service.dart';
@@ -9,6 +9,19 @@ import '../services/auth/auth_service.dart';
 REGISTER PAGE (Supabase Version)
 
 This page allows a new user to create an account using Supabase authentication.
+We need:
+
+- Name
+- Email
+- Password
+- Confirm Password
+
+--------------------------------------------------------------------------------
+
+Once the user successfully created an account they will be redirected to home page.
+
+Also, if user already has an account, they can go to login page from here.
+
 */
 
 class RegisterPage extends StatefulWidget {
@@ -21,42 +34,55 @@ class RegisterPage extends StatefulWidget {
 }
 
 class _RegisterPageState extends State<RegisterPage> {
-  final supabase = Supabase.instance.client;
-  final AuthService authService = AuthService(); // <-- add this
+  final AuthService _auth = AuthService();
+  final DatabaseService _db = DatabaseService();
 
+  // Text Controllers
   final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController pwController = TextEditingController();
   final TextEditingController confirmPwController = TextEditingController();
 
-  bool _isLoading = false;
-
   /// Register user
   Future<void> register() async {
+
+    // Password check
     if (pwController.text != confirmPwController.text) {
       showErrorDialog("Passwords don't match");
       return;
     }
-
+    // loading
     showLoadingCircle(context, message: "Registering...");
 
     try {
-      await authService.registerEmailPassword(
+      await _auth.registerEmailPassword(
         emailController.text.trim(),
         pwController.text.trim(),
-        nameController.text.trim(),
       );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Account created successfully!')),
+      // save info in databsae
+      await _db.saveUserInDatabase(
+        name: nameController.text.trim(),
+        email: emailController.text.trim(),
       );
-    } on Exception catch (e) {
-      showErrorDialog(e.toString());
-    } finally {
-      hideLoadingCircle(context);
+
+      // Show success feedback
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Account created successfully!')),
+        );
+        hideLoadingCircle(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        hideLoadingCircle(context);
+        // Show error dialog if register fails
+        showErrorDialog(e.toString());
+      }
     }
   }
 
+  /// Error dialog
   void showErrorDialog(String message) {
     showDialog(
       context: context,
@@ -82,27 +108,36 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
+  // Build UI
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
+
+        // SCAFFOLD
         Scaffold(
           backgroundColor: Theme.of(context).colorScheme.surface,
           body: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 25),
+              padding: const EdgeInsets.symmetric(horizontal: 28),
               child: Center(
                 child: SingleChildScrollView(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const SizedBox(height: 50),
+
+                      const SizedBox(height: 56),
+
+                      // ICON
                       Icon(
                         Icons.lock_open_rounded,
                         size: 70,
                         color: Theme.of(context).colorScheme.primary,
                       ),
-                      const SizedBox(height: 50),
+
+                      const SizedBox(height: 56),
+
+                      //TEXT
                       Text(
                         "Let's create an account for you",
                         style: TextStyle(
@@ -110,33 +145,51 @@ class _RegisterPageState extends State<RegisterPage> {
                           fontSize: 16,
                         ),
                       ),
-                      const SizedBox(height: 25),
+
+                      const SizedBox(height: 28),
+
+                      // Name Text Field
                       MyTextField(
                         controller: nameController,
                         hintText: "Enter name",
                         obscureText: false,
                       ),
-                      const SizedBox(height: 10),
+
+                      const SizedBox(height: 7),
+
+                      //Email Text Field
                       MyTextField(
                         controller: emailController,
                         hintText: "Enter email",
                         obscureText: false,
                       ),
-                      const SizedBox(height: 10),
+
+                      const SizedBox(height: 7),
+
+                      //Password Text Field
                       MyTextField(
                         controller: pwController,
                         hintText: "Enter password",
                         obscureText: true,
                       ),
-                      const SizedBox(height: 10),
+
+                      const SizedBox(height: 7),
+
+                      // Confirm password text field
                       MyTextField(
                         controller: confirmPwController,
                         hintText: "Confirm password",
                         obscureText: true,
                       ),
-                      const SizedBox(height: 25),
+
+                      const SizedBox(height: 28),
+
+                      // Register button
                       MyButton(text: "Register", onTap: register),
-                      const SizedBox(height: 50),
+
+                      const SizedBox(height: 56),
+
+                      // Text
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -146,7 +199,10 @@ class _RegisterPageState extends State<RegisterPage> {
                               color: Theme.of(context).colorScheme.primary,
                             ),
                           ),
-                          const SizedBox(width: 5),
+
+                          const SizedBox(width: 7),
+
+                          // Register tap
                           GestureDetector(
                             onTap: widget.onTap,
                             child: Text(

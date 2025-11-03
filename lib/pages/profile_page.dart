@@ -18,35 +18,44 @@ Displays user profile, bio, follow button, posts, followers/following counts
 */
 
 class ProfilePage extends StatefulWidget {
-  final String uid;
-  const ProfilePage({super.key, required this.uid});
+  final String userId;
+  const ProfilePage({super.key, required this.userId});
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+  late final databaseProvider = Provider.of<DatabaseProvider>(context, listen: false);
+
+
+  // user info
   UserProfile? user;
-  String currentUserId = AuthService().getCurrentUid();
-  bool _isLoading = true;
+  String currentUserId = AuthService().getCurrentUserId();
+
+  //
   bool _isFollowing = false;
   final bioTextController = TextEditingController();
 
+  // loading..
+  bool _isLoading = true;
+
+  // on startup,
   @override
   void initState() {
     super.initState();
-    _loadUser();
+
+    // let's load user info
+    loadUser();
   }
 
-  Future<void> _loadUser() async {
-    final databaseProvider = Provider.of<DatabaseProvider>(context, listen: false);
-
-    user = await databaseProvider.userProfile(widget.uid);
+  Future<void> loadUser() async {
+    user = await databaseProvider.getUserProfile(widget.userId);
     if (user == null) return;
 
-    await databaseProvider.loadUserFollowers(widget.uid);
-    await databaseProvider.loadUserFollowing(widget.uid);
-    _isFollowing = databaseProvider.isFollowing(widget.uid);
+    await databaseProvider.loadUserFollowers(widget.userId);
+    await databaseProvider.loadUserFollowing(widget.userId);
+    _isFollowing = databaseProvider.isFollowing(widget.userId);
 
     setState(() {
       _isLoading = false;
@@ -67,16 +76,13 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _saveBio() async {
-    final databaseProvider = Provider.of<DatabaseProvider>(context, listen: false);
     setState(() => _isLoading = true);
     await databaseProvider.updateBio(bioTextController.text);
-    await _loadUser();
+    await loadUser();
     setState(() => _isLoading = false);
   }
 
   Future<void> _toggleFollow() async {
-    final databaseProvider = Provider.of<DatabaseProvider>(context, listen: false);
-
     if (_isFollowing) {
       final confirm = await showDialog<bool>(
         context: context,
@@ -90,39 +96,55 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
       );
       if (confirm == true) {
-        await databaseProvider.unfollowUser(widget.uid);
+        await databaseProvider.unfollowUser(widget.userId);
+        databaseProvider.loadFollowingPosts();
         setState(() => _isFollowing = false);
       }
     } else {
-      await databaseProvider.followUser(widget.uid);
+      await databaseProvider.followUser(widget.userId);
+      databaseProvider.loadFollowingPosts();
       setState(() => _isFollowing = true);
     }
   }
 
+  // BUILD UI
   @override
   Widget build(BuildContext context) {
-    final databaseProvider = Provider.of<DatabaseProvider>(context);
-    final allUserPosts = databaseProvider.getUserPosts(widget.uid);
-    final followerCount = databaseProvider.getFollowerCount(widget.uid);
-    final followingCount = databaseProvider.getFollowingCount(widget.uid);
+    final allUserPosts = databaseProvider.getUserPosts(widget.userId);
+    final followerCount = databaseProvider.getFollowerCount(widget.userId);
+    final followingCount = databaseProvider.getFollowingCount(widget.userId);
 
+    //SCAFFOLD
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
+
+      // App bar
       appBar: AppBar(
-        title: Text(_isLoading ? '' : user?.name ?? ''),
+
+        // Username handle
+        title: Text(_isLoading ? '' : user!.name),
         foregroundColor: Theme.of(context).colorScheme.primary,
         centerTitle: true,
       ),
+
+      // Body
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : ListView(
+          ?
+      const Center(child: CircularProgressIndicator())
+          :
+      ListView(
         children: [
-          const SizedBox(height: 12),
+
+          const SizedBox(height: 14),
+
           Center(
             child: Text('@${user!.username}',
                 style: TextStyle(color: Theme.of(context).colorScheme.primary)),
           ),
+
           const SizedBox(height: 28),
+
+          // Profile picture
           Center(
             child: user!.profilePhotoUrl.isNotEmpty
                 ? CircleAvatar(
@@ -132,26 +154,34 @@ class _ProfilePageState extends State<ProfilePage> {
                 : Container(
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.secondary,
-                borderRadius: BorderRadius.circular(50),
+                borderRadius: BorderRadius.circular(56),
               ),
-              padding: const EdgeInsets.all(25),
+              padding: const EdgeInsets.all(28),
               child: Icon(Icons.person,
                   size: 70, color: Theme.of(context).colorScheme.primary),
             ),
           ),
+
           const SizedBox(height: 28),
+
+          // Followers
           MyProfileStats(
             postCount: allUserPosts.length,
-            followerCount: followerCount,
+              followerCount: followerCount,
             followingCount: followingCount,
             onTap: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => FollowListPage(uid: widget.uid)),
+              MaterialPageRoute(builder: (context) => FollowListPage(userId: widget.userId)),
             ),
           ),
+
           const SizedBox(height: 28),
+
+          // FOLLOW BUTTON
           if (user!.id != currentUserId)
             MyFollowButton(onPressed: _toggleFollow, isFollowing: _isFollowing),
+
+          // BIO
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 28.0),
             child: Row(
@@ -175,7 +205,7 @@ class _ProfilePageState extends State<ProfilePage> {
           allUserPosts.isEmpty
               ? Center(
             child: Padding(
-              padding: const EdgeInsets.all(12.0),
+              padding: const EdgeInsets.all(14.0),
               child: Text("No posts yet..",
                   style: TextStyle(color: Theme.of(context).colorScheme.primary)),
             ),

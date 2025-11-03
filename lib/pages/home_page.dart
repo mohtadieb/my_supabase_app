@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:my_supabase_app/components/my_input_alert_box.dart';
-import 'package:my_supabase_app/components/my_post_tile.dart';
-import 'package:my_supabase_app/helper/navigate_pages.dart';
-import 'package:my_supabase_app/models/post.dart';
 import 'package:provider/provider.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-
+import '../models/post.dart';
 import '../services/database/database_provider.dart';
-import '../services/database/database_service.dart';
+import '../components/my_input_alert_box.dart';
+import '../components/my_post_tile.dart';
+import '../helper/navigate_pages.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -17,20 +14,20 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin {
-  final supabase = Supabase.instance.client;
-  final _messageController = TextEditingController();
-  late final TabController _tabController;
+  late final listeningProvider = Provider.of<DatabaseProvider>(context);
   late final databaseProvider = Provider.of<DatabaseProvider>(context, listen: false);
 
+  final TextEditingController _messageController = TextEditingController();
+  late final TabController _tabController;
 
-  List<Post> allPosts = [];
-  List<Post> followingPosts = [];
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    loadAllPosts();
+
+    // Load posts once after the first frame
+    databaseProvider.loadAllPosts();
   }
 
   @override
@@ -40,65 +37,26 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     super.dispose();
   }
 
-  Future<void> loadAllPosts() async {
-    try {
-      // Load all posts
-      final allPostsData = await supabase
-          .from('posts')
-          .select('*, profiles(id, username, name)')
-          .order('created_at', ascending: false) as List;
-      allPosts = allPostsData.map((e) => Post.fromMap(e)).toList();
-
-      // Load following posts
-      final currentUserId = supabase.auth.currentUser?.id;
-      if (currentUserId != null) {
-        final followingIdsData = await supabase
-            .from('follows')
-            .select('followed_id')
-            .eq('follower_id', currentUserId) as List;
-        final followingIds = followingIdsData.map((e) => e['followed_id'] as String).toList();
-
-        followingPosts = allPosts.where((post) => followingIds.contains(post.uid)).toList();
-      }
-
-      setState(() {});
-    } catch (e) {
-      debugPrint('Error loading posts: $e');
-    }
-  }
-
   void openPostMessageBox() {
+    final TextEditingController _messageController = TextEditingController();
+
     showDialog(
       context: context,
       builder: (context) => MyInputAlertBox(
         textController: _messageController,
         hintText: "What's on your mind?",
         onPressed: () async {
-          await databaseProvider.postMessage(_messageController.text);
+          final text = _messageController.text.trim();
+          if (text.isEmpty) return;
+
+          await context.read<DatabaseProvider>().postMessage(text);
+
+          _messageController.clear();
         },
         onPressedText: "Post",
       ),
     );
   }
-
-  // Future<void> postMessage(String message) async {
-  //   if (message.trim().isEmpty) return;
-  //   try {
-  //     final userId = supabase.auth.currentUser?.id;
-  //     if (userId == null) return;
-  //
-  //     await supabase.from('posts').insert({
-  //       'uid': userId,
-  //       'message': message.trim(),
-  //       'created_at': DateTime.now().toIso8601String(),
-  //     });
-  //
-  //     _messageController.clear();
-  //     await loadAllPosts();
-  //   } catch (e) {
-  //     debugPrint('Error posting message: $e');
-  //   }
-  // }
 
   @override
   Widget build(BuildContext context) {
@@ -118,18 +76,25 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               unselectedLabelColor: Theme.of(context).colorScheme.primary,
               indicatorColor: Theme.of(context).colorScheme.secondary,
               tabs: const [
-                Tab(text: "For you"),
+                Tab(text: "For You"),
                 Tab(text: "Following"),
               ],
             ),
           ),
           Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildPostList(allPosts),
-                _buildPostList(followingPosts),
-              ],
+            child: Consumer<DatabaseProvider>(
+              builder: (context, dbProvider, _) {
+                final allPosts = dbProvider.allPosts;
+                final followingPosts = dbProvider.followingPosts;
+
+                return TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildPostList(allPosts),
+                    _buildPostList(followingPosts),
+                  ],
+                );
+              },
             ),
           ),
         ],
@@ -139,13 +104,14 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
   Widget _buildPostList(List<Post> posts) {
     if (posts.isEmpty) return const Center(child: Text("Nothing here.."));
+
     return ListView.builder(
       itemCount: posts.length,
       itemBuilder: (context, index) {
         final post = posts[index];
         return MyPostTile(
           post: post,
-          onUserTap: () => goUserPage(context, post.uid),
+          onUserTap: () => goUserPage(context, post.userId),
           onPostTap: () => goPostPage(context, post),
         );
       },

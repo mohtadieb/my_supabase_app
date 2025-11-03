@@ -4,7 +4,6 @@ import 'package:my_supabase_app/components/my_loading_circle.dart';
 import 'package:provider/provider.dart';
 
 import '../components/my_settings_tile.dart';
-import '../components/my_loading_overlay.dart';
 import '../helper/navigate_pages.dart';
 import '../services/auth/auth_service.dart';
 import '../services/database/database_provider.dart';
@@ -29,7 +28,11 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  // Auth Service
   final AuthService _auth = AuthService(); // Auth logic
+
+  // Database provider
+  //late final databaseProvider = Provider.of<DatabaseProvider>(context, listen: false,);
 
   /// Handles logout via AuthService
   Future<void> logout() async {
@@ -40,25 +43,24 @@ class _SettingsPageState extends State<SettingsPage> {
       await _auth.logout();
 
       // Clear any cached user data in provider
-      final databaseProvider = Provider.of<DatabaseProvider>(
-        context,
-        listen: false,
-      );
-      databaseProvider.clearSearchResults();
+
+      //databaseProvider.clearAllCachedData();
 
       // Show success feedback
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Logged out successfully!')),
         );
+        hideLoadingCircle(context);
       }
 
       // AuthGate will detect session change automatically
     } catch (e) {
-      // Show error dialog if logout fails
-      if (mounted) showErrorDialog(e.toString());
-    } finally {
-      hideLoadingCircle(context);
+      if (mounted) {
+        hideLoadingCircle(context);
+        // Show error dialog if logout fails
+        showErrorDialog(e.toString());
+      }
     }
   }
 

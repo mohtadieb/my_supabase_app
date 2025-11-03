@@ -8,10 +8,10 @@ import '../pages/profile_page.dart';
 import '../models/post.dart';
 
 /// Navigate to a user's profile page (Supabase UID)
-void goUserPage(BuildContext context, String uid) {
+void goUserPage(BuildContext context, String userId) {
   Navigator.push(
     context,
-    MaterialPageRoute(builder: (_) => ProfilePage(uid: uid)),
+    MaterialPageRoute(builder: (_) => ProfilePage(userId: userId)),
   );
 }
 
@@ -46,4 +46,5 @@ void goHomePage(BuildContext context) {
     MaterialPageRoute(builder: (_) => const HomePage()),
         (route) => false,
   );
+
 }

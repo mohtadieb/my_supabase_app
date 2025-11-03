@@ -116,7 +116,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
                           context,
                           listen: false,
                         );
-                        await db.deleteUser(_auth.getCurrentUid());
+                        await db.deleteUser(_auth.getCurrentUserId());
 
                         if (mounted) {
                           Navigator.pop(context); // Close dialog
@@ -150,27 +150,29 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
         title: const Text("Account Settings"),
         foregroundColor: Theme.of(context).colorScheme.primary,
       ),
-      body: Center(
-        child: GestureDetector(
-          onTap: () => confirmDeletion(context),
-          child: Container(
-            padding: const EdgeInsets.all(28),
-            margin: const EdgeInsets.all(28),
-            decoration: BoxDecoration(
-              color: Colors.red,
-              borderRadius: BorderRadius.circular(7),
-            ),
-            child: const Center(
-              child: Text(
-                "Delete account",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+      body: Column(
+        children: [
+          GestureDetector(
+            onTap: () => confirmDeletion(context),
+            child: Container(
+              padding: const EdgeInsets.all(28),
+              margin: const EdgeInsets.all(28),
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(7),
+              ),
+              child: const Center(
+                child: Text(
+                  "Delete account",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

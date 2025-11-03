@@ -8,74 +8,58 @@ Handles all authentication logic with Supabase:
 - Delete account (requires password confirmation)
 */
 
+import 'package:my_supabase_app/services/database/database_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../database/database_service.dart';
 
 class AuthService {
-  final supabase = Supabase.instance.client;
-  final DatabaseService _db = DatabaseService();
+  final _auth = Supabase.instance.client.auth;
+  final DatabaseService _db = DatabaseService(); // ✅ Use service, not provider
 
   /* ==================== CURRENT USER ==================== */
-  User? getCurrentUser() => supabase.auth.currentUser;
-  String getCurrentUid() => supabase.auth.currentUser?.id ?? '';
+  User? getCurrentUser() => _auth.currentUser;
+  String getCurrentUserId() => _auth.currentUser!.id;
 
   /* ==================== LOGIN / REGISTER ==================== */
 
   /// Login using email/password
-  Future<void> loginEmailPassword(String email, String password) async {
+  Future<AuthResponse> loginEmailPassword(String email, String password) async {
+
+    // Attempt login
     try {
-      final res = await supabase.auth.signInWithPassword(
+      final authResponse = await _auth.signInWithPassword(
         email: email,
         password: password,
       );
 
-      if (res.session == null) {
+      if (authResponse.session == null) {
         throw Exception("Login failed.");
       }
+      return authResponse;
     } on AuthException catch (e) {
       throw Exception(e.message);
     }
   }
 
   /// Register new user
-  // Future<void> registerEmailPassword(String email, String password, String name) async {
-  //   try {
-  //     final res = await supabase.auth.signUp(
-  //       email: email,
-  //       password: password,
-  //     );
-  //
-  //     if (res.user == null) throw Exception("Registration failed.");
-  //
-  //     // Save user info to Supabase profiles table
-  //     await _dbService.saveUserInfo(name: name, email: email, userId: res.user!.id);
-  //   } on AuthException catch (e) {
-  //     throw Exception(e.message);
-  //   }
-  // }
-
-  Future<void> registerEmailPassword(String email, String password, String name) async {
+  Future<AuthResponse> registerEmailPassword(String email, String password) async {
     try {
       // 1️⃣ Sign up user
-      final res = await supabase.auth.signUp(
+      final authResponse = await _auth.signUp(
         email: email,
         password: password,
       );
 
-      if (res.user == null) throw Exception("Registration failed.");
+      if (authResponse.user == null) throw Exception("Registration failed.");
 
-      // 2️⃣ Save user info to 'profiles' table
-      await _db.saveUserInfo(
-        name: name,
-        email: email, userId: res.user!.id,
-      );
 
       // 3️⃣ Sign in automatically
-      await supabase.auth.signInWithPassword(
+      await _auth.signInWithPassword(
         email: email,
         password: password,
       );
 
+      return authResponse;
     } on AuthException catch (e) {
       throw Exception(e.message);
     }
@@ -85,7 +69,7 @@ class AuthService {
   /* ==================== LOGOUT ==================== */
   Future<void> logout() async {
     try {
-      await supabase.auth.signOut();
+      await _auth.signOut();
       print("User logged out successfully.");
     } catch (e) {
       print("Logout error: $e");
@@ -102,7 +86,7 @@ class AuthService {
 
     try {
       // 1️⃣ Re-authenticate the user using Supabase signIn
-      final res = await supabase.auth.signInWithPassword(
+      final res = await _auth.signInWithPassword(
         email: user.email!,
         password: password,
       );
@@ -111,7 +95,7 @@ class AuthService {
         throw Exception("Invalid password.");
       }
 
-      // 2️⃣ Delete all user data via DatabaseService
+      // 2️⃣ Delete all user data
       await _db.deleteUser(user.id);
 
       // 3️⃣ Delete Supabase auth user

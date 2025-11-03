@@ -14,9 +14,9 @@ import '../models/user.dart';
 import '../services/database/database_provider.dart';
 
 class FollowListPage extends StatefulWidget {
-  final String uid;
+  final String userId;
 
-  const FollowListPage({super.key, required this.uid});
+  const FollowListPage({super.key, required this.userId});
 
   @override
   State<FollowListPage> createState() => _FollowListPageState();
@@ -40,12 +40,12 @@ class _FollowListPageState extends State<FollowListPage> {
 
   // load followers
   Future<void> loadFollowerList() async {
-    await databaseProvider.loadUserFollowerProfiles(widget.uid);
+    await databaseProvider.loadUserFollowerProfiles(widget.userId);
   }
 
   // load following
   Future<void> loadFollowingList() async {
-    await databaseProvider.loadUserFollowingProfiles(widget.uid);
+    await databaseProvider.loadUserFollowingProfiles(widget.userId);
   }
 
   // build user list given a list of profiles
@@ -65,8 +65,8 @@ class _FollowListPageState extends State<FollowListPage> {
 
   @override
   Widget build(BuildContext context) {
-    final followers = listeningProvider.getListOfFollowersProfile(widget.uid);
-    final following = listeningProvider.getListOfFollowingProfile(widget.uid);
+    final followers = listeningProvider.getListOfFollowersProfile(widget.userId);
+    final following = listeningProvider.getListOfFollowingProfile(widget.userId);
 
     return DefaultTabController(
       length: 2,

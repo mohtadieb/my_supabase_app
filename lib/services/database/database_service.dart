@@ -1,52 +1,79 @@
+/*
+
+DATABASE SERVICE
+
+This class handles all the data from and to supabase
+
+--------------------------------------------------------------------------------
+
+- User Profile
+- Post message
+- Likes
+- Comments
+- Account stuff (report / block / delete account)
+- Follow / unfollow
+- Search users
+
+ */
+
+
+import 'package:flutter/cupertino.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/comment.dart';
 import '../../models/post.dart';
 import '../../models/user.dart';
 
 class DatabaseService {
-  final supabase = Supabase.instance.client;
+  // get instance of supabase
+  final _db = Supabase.instance.client;
+  final _auth = Supabase.instance.client.auth;
 
   /* ==================== USER PROFILE ==================== */
-  Future<void> saveUserInfo({
-    required String name,
-    required String email,
-    required String userId, // add this
-  }) async {
+  // Save user in database
+  Future<void> saveUserInDatabase({required String name, required String email}) async {
+
+    // get current userId
+    String userId = _auth.currentUser!.id;
+
     // Generate a safe username
     String username = email.split('@').first.trim();
     if (username.isEmpty) {
       username = 'user_$userId';
     }
 
-    final userMap = {
-      'id': userId,
-      'name': name.trim(),
-      'email': email.trim(),
-      'username': username,
-      'bio': '',
-      'profile_photo_url': '',
-      'created_at': DateTime.now().toIso8601String(),
-    };
+    // Create user profile
+    UserProfile user = UserProfile(
+        id: userId,
+        name: name,
+        email: email,
+        username: username,
+        bio: '',
+        createdAt: DateTime.now(),
+    );
+
+    // convert user into map so that we can store in in supabase
+    final userMap = user.toMap();
 
     print('Inserting user: $userMap');
 
+    // save user in database
     try {
-      await supabase.from('profiles').insert(userMap);
+      await _db.from('profiles').insert(userMap);
     } catch (e, st) {
       print("Error saving user info: $e\n$st");
     }
   }
 
-  Future<UserProfile?> getUser(String uid) async {
-    try {
-      final data = await supabase
-          .from('profiles')
-          .select()
-          .eq('id', uid) // ✅ primary key now `id`
-          .maybeSingle();
+  // Get user from database
+  Future<UserProfile?> getUserFromDatabase(String userId) async {
 
-      if (data == null) return null;
-      return UserProfile.fromMap(data);
+    // Retrieve user info from database
+    try {
+      final userData = await _db.from('profiles').select().eq('id', userId).maybeSingle();
+      if (userData == null) return null;
+
+      // Convert userData to user profile
+      return UserProfile.fromMap(userData);
     } catch (e) {
       print("Error fetching user: $e");
       return null;
@@ -54,125 +81,160 @@ class DatabaseService {
   }
 
   Future<void> updateUserBio(String bio) async {
-    final uid = supabase.auth.currentUser?.id;
-    if (uid == null) return;
+    final userId = _auth.currentUser?.id;
+    if (userId == null) return;
 
     try {
-      await supabase.from('profiles').update({'bio': bio}).eq('id', uid);
+      await _db.from('profiles').update({'bio': bio}).eq('id', userId);
     } catch (e) {
       print("Error updating bio: $e");
     }
   }
 
-  /* ==================== DELETE USER ==================== */
-  Future<void> deleteUser(String uid) async {
-    try {
-      await supabase.from('posts').delete().eq('uid', uid);
-      await supabase.from('comments').delete().eq('uid', uid);
-      await supabase.from('post_likes').delete().eq('uid', uid);
-      await supabase
-          .from('follows')
-          .delete()
-          .or('follower_id.eq.$uid,followed_id.eq.$uid');
-      await supabase
-          .from('blocks')
-          .delete()
-          .or('blocker_id.eq.$uid,blocked_id.eq.$uid');
-      await supabase.from('profiles').delete().eq('id', uid); // ✅ changed
-    } catch (e) {
-      print("Error deleting user: $e");
-    }
-  }
 
   /* ==================== POSTS ==================== */
-  Future<void> postMessage(String message) async {
-    final uid = supabase.auth.currentUser?.id;
-    if (uid == null || message.trim().isEmpty) return;
-
-    final user = await getUser(uid);
-    if (user == null) return;
-
-    final post = Post(
-      id: '',
-      uid: uid,
-      name: user.name,
-      username: user.username,
-      message: message.trim(),
-      createdAt: DateTime.now(),
-      likeCount: 0,
-      likedBy: [],
-    );
+  /// Create a new post and return the inserted Post object
+  Future<Post?> postMessage(String message) async {
+    final userId = _auth.currentUser?.id;
+    if (userId == null || message.trim().isEmpty) return null;
 
     try {
-      await supabase.from('posts').insert(post.toMap());
+      // Get user profile info
+      final profileData = await _db
+          .from('profiles')
+          .select('id, name, username')
+          .eq('id', userId)
+          .maybeSingle();
+
+      if (profileData == null) return null;
+
+      // Insert post and return the inserted row
+      final insertedPost = await _db.from('posts').insert({
+        'user_id': userId, // ✅ Must match table column exactly
+        'name': profileData['name'],
+        'username': profileData['username'],
+        'message': message.trim(),
+        'created_at': DateTime.now().toIso8601String(),
+        'like_count': 0,
+        'liked_by': <String>[], // empty list for text[]
+      }).select().maybeSingle(); // ✅ return inserted row
+
+      if (insertedPost == null) return null;
+
+      // Convert to Post model
+      return Post.fromMap(insertedPost);
     } catch (e) {
       print("Error posting message: $e");
+      return null;
     }
   }
 
+  /// Get all posts
+  Future<List<Post>> getAllPosts() async {
+    try {
+      final List data = await _db
+          .from('posts')
+          .select('*, profiles(id, username, name)')
+          .order('created_at', ascending: false) as List;
+
+      return data.map((e) => Post.fromMap(e)).toList();
+    } catch (e) {
+      print("Error fetching all posts: $e");
+      return [];
+    }
+  }
+  /// Delete a post
   Future<void> deletePost(String postId) async {
     try {
-      await supabase.from('posts').delete().eq('id', postId);
+      await _db.from('posts').delete().eq('id', postId);
     } catch (e) {
       print("Error deleting post: $e");
     }
   }
 
-  Future<List<Post>> getAllPosts() async {
+  /* ==================== LIKES ==================== */
+  /// Toggle like for a post
+  //// Toggle like for a post and update liked_by array
+  Future<Post?> toggleLike(String userId, String postId) async {
     try {
-      final List data = await supabase
+      // Fetch current post
+      final postData = await _db
           .from('posts')
-          .select()
-          .order('created_at', ascending: false);
+          .select('id, like_count, liked_by')
+          .eq('id', postId)
+          .maybeSingle();
 
-      return data.map((e) => Post.fromMap(e)).toList();
+      if (postData == null) return null;
+
+      List<String> likedBy = List<String>.from(postData['liked_by'] ?? []);
+      int likeCount = postData['like_count'] ?? 0;
+
+      if (likedBy.contains(userId)) {
+        // Unlike
+        likedBy.remove(userId);
+        likeCount = likeCount > 0 ? likeCount - 1 : 0;
+      } else {
+        // Like
+        likedBy.add(userId);
+        likeCount += 1;
+      }
+
+      // Update the post in DB
+      final updatedPost = await _db
+          .from('posts')
+          .update({
+        'liked_by': likedBy,
+        'like_count': likeCount,
+      })
+          .eq('id', postId)
+          .select()
+          .maybeSingle();
+
+      if (updatedPost == null) return null;
+
+      return Post.fromMap(updatedPost);
     } catch (e) {
-      print("Error fetching posts: $e");
-      return [];
+      print('Error toggling like: $e');
+      return null;
     }
   }
 
-  /* ==================== LIKES ==================== */
-  Future<void> toggleLike(String postId) async {
-    final uid = supabase.auth.currentUser?.id;
-    if (uid == null) return;
+  Future<List<String>> getLikedPostIds(String userId, List<String> postIds) async {
+    final likedPostIds = <String>[];
+    if (postIds.isEmpty) return likedPostIds;
 
     try {
-      final List existing = await supabase
+      final res = await _db
           .from('post_likes')
-          .select()
-          .eq('post_id', postId)
-          .eq('uid', uid);
+          .select('post_id')
+          .eq('user_id', userId) // ✅ updated
+          .filter('post_id', 'in', '(${postIds.map((e) => "'$e'").join(",")})');
 
-      if (existing.isNotEmpty) {
-        await supabase
-            .from('post_likes')
-            .delete()
-            .eq('post_id', postId)
-            .eq('uid', uid);
-      } else {
-        await supabase.from('post_likes').insert({
-          'post_id': postId,
-          'uid': uid,
-        });
+      if (res != null && res is List) {
+        for (final row in res) {
+          if (row['post_id'] != null) {
+            likedPostIds.add(row['post_id'].toString());
+          }
+        }
       }
     } catch (e) {
-      print("Error toggling like: $e");
+      print("Error fetching liked posts: $e");
     }
+
+    return likedPostIds;
   }
+//* ==================== COMMENTS ==================== */
+  Future<Comment?> addComment(String postId, String message) async {
+    final userId = _auth.currentUser?.id;
+    if (userId == null || message.trim().isEmpty) return null;
 
-  /* ==================== COMMENTS ==================== */
-  Future<void> addComment(String postId, String message) async {
-    final uid = supabase.auth.currentUser?.id;
-    if (uid == null || message.trim().isEmpty) return;
-
-    final user = await getUser(uid);
-    if (user == null) return;
+    final user = await getUserFromDatabase(userId);
+    if (user == null) return null;
 
     final comment = Comment(
-      id: '',
+      id: '', // Supabase auto-generates if empty
       postId: postId,
-      uid: uid,
+      userId: userId,
       name: user.name,
       username: user.username,
       message: message.trim(),
@@ -180,42 +242,139 @@ class DatabaseService {
     );
 
     try {
-      await supabase.from('comments').insert(comment.toMap());
+      final response = await _db
+          .from('comments')
+          .insert(comment.toMap())
+          .select()
+          .single(); // return the inserted row
+
+      return Comment(
+        id: response['id'] ?? '',
+        postId: response['post_id'] ?? '',
+        userId: response['user_id'] ?? '', // <-- using user_id
+        name: response['name'] ?? '',
+        username: response['username'] ?? '',
+        message: response['message'] ?? '',
+        createdAt: response['created_at'] != null
+            ? DateTime.parse(response['created_at'])
+            : DateTime.now(),
+      );
     } catch (e) {
       print("Error adding comment: $e");
-    }
-  }
-
-  Future<void> deleteComment(String commentId) async {
-    try {
-      await supabase.from('comments').delete().eq('id', commentId);
-    } catch (e) {
-      print("Error deleting comment: $e");
+      return null;
     }
   }
 
   Future<List<Comment>> getComments(String postId) async {
     try {
-      final List data = await supabase
+      final response = await _db
           .from('comments')
           .select()
           .eq('post_id', postId)
           .order('created_at', ascending: true);
 
-      return data.map((e) => Comment.fromMap(e)).toList();
+      return (response as List<dynamic>)
+          .map((c) => Comment(
+        id: c['id'] ?? '',
+        postId: c['post_id'] ?? '',
+        userId: c['user_id'] ?? '', // <-- using user_id
+        name: c['name'] ?? '',
+        username: c['username'] ?? '',
+        message: c['message'] ?? '',
+        createdAt: c['created_at'] != null
+            ? DateTime.parse(c['created_at'])
+            : DateTime.now(),
+      ))
+          .toList();
     } catch (e) {
-      print("Error fetching comments: $e");
+      print("Error loading comments: $e");
       return [];
     }
   }
 
+  Future<void> deleteComment(String commentId) async {
+    try {
+      await _db.from('comments').delete().eq('id', commentId);
+    } catch (e) {
+      print("Error deleting comment: $e");
+    }
+  }
+
+
+/* ==================== FOLLOW / UNFOLLOW ==================== */
+  Future<void> followUser(String targetUserId) async {
+    final currentUserId = _auth.currentUser?.id;
+    if (currentUserId == null) return;
+
+    try {
+      await _db.from('follows').insert({
+        'follower_id': currentUserId,
+        'followed_id': targetUserId,
+      });
+    } catch (e) {
+      print("Error following user: $e");
+    }
+  }
+
+  Future<void> unfollowUser(String targetUserId) async {
+    final currentUserId = _auth.currentUser?.id;
+    if (currentUserId == null) return;
+
+    try {
+      await _db
+          .from('follows')
+          .delete()
+          .eq('follower_id', currentUserId)
+          .eq('followed_id', targetUserId);
+    } catch (e) {
+      print("Error unfollowing user: $e");
+    }
+  }
+
+  Future<List<String>> getFollowerUserIds(String userId) async {
+    try {
+      final List data = await _db
+          .from('follows')
+          .select('follower_id')
+          .eq('followed_id', userId);
+      return data.map((e) => e['follower_id'] as String).toList();
+    } catch (e) {
+      print("Error getting followers: $e");
+      return [];
+    }
+  }
+
+
+  Future<List<String>> getFollowingUserIds(String userId) async {
+    try {
+      final List data = await _db
+          .from('follows')
+          .select('followed_id')
+          .eq('follower_id', userId);
+      return data.map((e) => e['followed_id'] as String).toList();
+    } catch (e) {
+      print("Error getting following: $e");
+      return [];
+    }
+  }
+
+  Future<void> removeFollower(String userId) async {
+    final currentUserId = _auth.currentUser?.id;
+    if (currentUserId == null) return;
+
+    await _db
+        .from('followers')
+        .delete()
+        .match({'follower_id': userId, 'following_id': currentUserId});
+  }
+
   /* ==================== REPORT / BLOCK ==================== */
   Future<void> reportUser(String postId, String userId) async {
-    final currentUser = supabase.auth.currentUser?.id;
+    final currentUser = _db.auth.currentUser?.id;
     if (currentUser == null) return;
 
     try {
-      await supabase.from('reports').insert({
+      await _db.from('reports').insert({
         'reported_by': currentUser,
         'message_id': postId,
         'message_owner_id': userId,
@@ -227,11 +386,11 @@ class DatabaseService {
   }
 
   Future<void> blockUser(String userId) async {
-    final currentUser = supabase.auth.currentUser?.id;
+    final currentUser = _db.auth.currentUser?.id;
     if (currentUser == null) return;
 
     try {
-      await supabase.from('blocks').insert({
+      await _db.from('blocks').insert({
         'blocker_id': currentUser,
         'blocked_id': userId,
       });
@@ -241,11 +400,11 @@ class DatabaseService {
   }
 
   Future<void> unblockUser(String userId) async {
-    final currentUser = supabase.auth.currentUser?.id;
+    final currentUser = _db.auth.currentUser?.id;
     if (currentUser == null) return;
 
     try {
-      await supabase
+      await _db
           .from('blocks')
           .delete()
           .eq('blocker_id', currentUser)
@@ -255,12 +414,12 @@ class DatabaseService {
     }
   }
 
-  Future<List<String>> getBlockedUids() async {
-    final currentUser = supabase.auth.currentUser?.id;
+  Future<List<String>> getBlockedUserIds() async {
+    final currentUser = _db.auth.currentUser?.id;
     if (currentUser == null) return [];
 
     try {
-      final List data = await supabase
+      final List data = await _db
           .from('blocks')
           .select('blocked_id')
           .eq('blocker_id', currentUser);
@@ -272,70 +431,75 @@ class DatabaseService {
     }
   }
 
-  /* ==================== FOLLOW / UNFOLLOW ==================== */
-  Future<void> followUser(String targetUid) async {
-    final currentUser = supabase.auth.currentUser?.id;
-    if (currentUser == null) return;
+  Future<void> removeLikesBetweenUsers(String currentUserId, String blockedUserId) async {
+    // 1️⃣ Get all post IDs by blocked user
+    final blockedUserPosts = await _db
+        .from('posts')
+        .select('id')
+        .eq('user_id', blockedUserId);
 
-    try {
-      await supabase.from('follows').insert({
-        'follower_id': currentUser,
-        'followed_id': targetUid,
-      });
-    } catch (e) {
-      print("Error following user: $e");
+    final blockedPostIds =
+    (blockedUserPosts as List).map((p) => p['id'] as String).toList();
+
+    // 2️⃣ Get all post IDs by current user
+    final currentUserPosts = await _db
+        .from('posts')
+        .select('id')
+        .eq('user_id', currentUserId);
+
+    final currentPostIds =
+    (currentUserPosts as List).map((p) => p['id'] as String).toList();
+
+    // 3️⃣ Remove likes that current user gave to blocked user’s posts
+    if (blockedPostIds.isNotEmpty) {
+      await _db
+          .from('post_likes')
+          .delete()
+          .inFilter('post_id', blockedPostIds)
+          .eq('user_id', currentUserId);
     }
+
+    // 4️⃣ Remove likes that blocked user gave to current user’s posts
+    if (currentPostIds.isNotEmpty) {
+      await _db
+          .from('post_likes')
+          .delete()
+          .inFilter('post_id', currentPostIds)
+          .eq('user_id', blockedUserId);
+    }
+
+    // 5️⃣ (Optional) Update like counts if needed
+    // You can call an RPC or recalculate in Dart if you maintain counts manually.
   }
 
-  Future<void> unfollowUser(String targetUid) async {
-    final currentUser = supabase.auth.currentUser?.id;
-    if (currentUser == null) return;
 
+/* ==================== DELETE USER ==================== */
+  Future<void> deleteUser(String userId) async {
     try {
-      await supabase
+      await _db.from('posts').delete().eq('userId', userId);
+      await _db.from('comments').delete().eq('userId', userId);
+      await _db.from('post_likes').delete().eq('userId', userId);
+      await _db
           .from('follows')
           .delete()
-          .eq('follower_id', currentUser)
-          .eq('followed_id', targetUid);
+          .or('follower_id.eq.$userId,followed_id.eq.$userId');
+      await _db
+          .from('blocks')
+          .delete()
+          .or('blocker_id.eq.$userId,blocked_id.eq.$userId');
+      await _db.from('profiles').delete().eq('id', userId);
     } catch (e) {
-      print("Error unfollowing user: $e");
+      debugPrint('Error deleting user: $e');
     }
   }
 
-  Future<List<String>> getFollowerUids(String uid) async {
-    try {
-      final List data = await supabase
-          .from('follows')
-          .select('follower_id')
-          .eq('followed_id', uid);
 
-      return data.map((e) => e['follower_id'] as String).toList();
-    } catch (e) {
-      print("Error getting followers: $e");
-      return [];
-    }
-  }
-
-  Future<List<String>> getFollowingUids(String uid) async {
-    try {
-      final List data = await supabase
-          .from('follows')
-          .select('followed_id')
-          .eq('follower_id', uid);
-
-      return data.map((e) => e['followed_id'] as String).toList();
-    } catch (e) {
-      print("Error getting following: $e");
-      return [];
-    }
-  }
-
-  /* ==================== SEARCH USERS ==================== */
+/* ==================== SEARCH USERS ==================== */
   Future<List<UserProfile>> searchUsers(String searchTerm) async {
     if (searchTerm.isEmpty) return [];
 
     try {
-      final List data = await supabase
+      final List data = await _db
           .from('profiles')
           .select()
           .ilike('username', '%$searchTerm%');
@@ -346,4 +510,27 @@ class DatabaseService {
       return [];
     }
   }
+
+/* ==================== TIME ==================== */
+
+  Future<DateTime?> getServerTime() async {
+    try {
+      final response = await _db
+          .from('posts')
+          .select('now()')
+          .limit(1)
+          .maybeSingle();
+
+      if (response == null || response['now'] == null) return null;
+
+      // Supabase returns UTC time, so keep it consistent
+      return DateTime.parse(response['now']).toUtc();
+    } catch (e) {
+      print('Error fetching server time: $e');
+      return null;
+    }
+  }
+
 }
+
+

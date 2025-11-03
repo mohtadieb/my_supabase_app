@@ -22,8 +22,8 @@ class MyCommentTile extends StatelessWidget {
 
   /// Show options for this comment: delete (own), report/block (others)
   void _showOptions(BuildContext context) {
-    final currentUid = AuthService().getCurrentUid();
-    final isOwnComment = comment.uid == currentUid;
+    final currentUserId = AuthService().getCurrentUserId();
+    final isOwnComment = comment.userId == currentUserId;
 
     showModalBottomSheet(
       context: context,
