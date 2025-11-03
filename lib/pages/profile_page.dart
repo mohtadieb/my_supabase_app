@@ -137,8 +137,9 @@ class _ProfilePageState extends State<ProfilePage> {
 
           const SizedBox(height: 14),
 
+          // Username
           Center(
-            child: Text('@${user!.username}',
+            child: Text(_isLoading ? '' : '@${user!.username}',
                 style: TextStyle(color: Theme.of(context).colorScheme.primary)),
           ),
 
@@ -147,11 +148,13 @@ class _ProfilePageState extends State<ProfilePage> {
           // Profile picture
           Center(
             child: user!.profilePhotoUrl.isNotEmpty
-                ? CircleAvatar(
+                ?
+            CircleAvatar(
               radius: 50,
               backgroundImage: NetworkImage(user!.profilePhotoUrl),
             )
-                : Container(
+                :
+            Container(
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.secondary,
                 borderRadius: BorderRadius.circular(56),
@@ -164,7 +167,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
           const SizedBox(height: 28),
 
-          // Followers
+          // Profile stats
           MyProfileStats(
             postCount: allUserPosts.length,
               followerCount: followerCount,
@@ -196,7 +199,9 @@ class _ProfilePageState extends State<ProfilePage> {
               ],
             ),
           ),
+
           const SizedBox(height: 7),
+
           MyBioBox(text: user!.bio),
           Padding(
             padding: const EdgeInsets.only(left: 28.0, top: 28.0),
