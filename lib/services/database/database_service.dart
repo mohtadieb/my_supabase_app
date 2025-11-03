@@ -18,6 +18,7 @@ This class handles all the data from and to supabase
 
 
 import 'package:flutter/cupertino.dart';
+import 'package:my_supabase_app/services/auth/auth_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/comment.dart';
 import '../../models/post.dart';
@@ -80,9 +81,11 @@ class DatabaseService {
     }
   }
 
-  Future<void> updateUserBio(String bio) async {
-    final userId = _auth.currentUser?.id;
-    if (userId == null) return;
+  // Update user bio
+  Future<void> updateUserBioInDatabase(String bio) async {
+
+    // Get current user Id
+    String userId = AuthService().getCurrentUserId();
 
     try {
       await _db.from('profiles').update({'bio': bio}).eq('id', userId);
@@ -129,6 +132,15 @@ class DatabaseService {
     }
   }
 
+  /// Delete a post
+  Future<void> deletePost(String postId) async {
+    try {
+      await _db.from('posts').delete().eq('id', postId);
+    } catch (e) {
+      print("Error deleting post: $e");
+    }
+  }
+
   /// Get all posts
   Future<List<Post>> getAllPosts() async {
     try {
@@ -143,14 +155,9 @@ class DatabaseService {
       return [];
     }
   }
-  /// Delete a post
-  Future<void> deletePost(String postId) async {
-    try {
-      await _db.from('posts').delete().eq('id', postId);
-    } catch (e) {
-      print("Error deleting post: $e");
-    }
-  }
+
+  /// Get individual post
+
 
   /* ==================== LIKES ==================== */
   /// Toggle like for a post

@@ -19,6 +19,7 @@ class Post {
     required this.likedBy,
   });
 
+  // Convert a Database document to a Post object (to use in our app)
   factory Post.fromMap(Map<String, dynamic> map) {
     return Post(
       id: map['id'].toString(),
@@ -34,6 +35,7 @@ class Post {
     );
   }
 
+  // Convert a Post object to a map (to store in Database)
   Map<String, dynamic> toMap() {
     return {
       'id': id,

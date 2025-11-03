@@ -27,48 +27,55 @@ import 'database_service.dart';
 class DatabaseProvider extends ChangeNotifier {
 
   // Get db & auth service
-  final DatabaseService _db = DatabaseService();
   final AuthService _auth = AuthService();
+  final DatabaseService _db = DatabaseService();
 
   /* ==================== USER PROFILE ==================== */
-  UserProfile? _currentUser;
-  UserProfile? get currentUser => _currentUser;
+  // // DOUBLE CHECK
+  // UserProfile? _currentUser;
+  // UserProfile? get currentUser => _currentUser;
+  //
+  // Future<UserProfile?> getUserProfile(String userId) async {
+  //   // Return cached version if already loaded
+  //   if (_currentUser != null && _currentUser!.id == userId) return _currentUser;
+  //
+  //   try {
+  //     final user = await _db.getUserFromDatabase(userId);
+  //     if (user != null) {
+  //       _currentUser = user;
+  //       notifyListeners();
+  //     }
+  //     return user;
+  //   } catch (e) {
+  //     debugPrint('Error fetching user profile: $e');
+  //     return null;
+  //   }
+  // }
 
-  Future<UserProfile?> getUserProfile(String userId) async {
-    // Return cached version if already loaded
-    if (_currentUser != null && _currentUser!.id == userId) return _currentUser;
+  // Get user profile given userId
+  Future<UserProfile?> getUserProfile(String userId) => _db.getUserFromDatabase(userId);
 
-    try {
-      final user = await _db.getUserFromDatabase(userId);
-      if (user != null) {
-        _currentUser = user;
-        notifyListeners();
-      }
-      return user;
-    } catch (e) {
-      debugPrint('Error fetching user profile: $e');
-      return null;
-    }
-  }
+  // Future<void> updateBio(String bio) async {
+  //   final currentUserId = _auth.getCurrentUserId();
+  //   if (currentUserId.isEmpty) return;
+  //
+  //   try {
+  //     // ✅ Delegate database update to DatabaseService
+  //     await _db.updateUserBioInDatabase(bio);
+  //
+  //     // ✅ Update local cached user profile
+  //     if (_currentUser != null) {
+  //       _currentUser = _currentUser!.copyWith(bio: bio);
+  //     }
+  //
+  //     notifyListeners();
+  //   } catch (e) {
+  //     debugPrint('Error updating bio: $e');
+  //   }
+  // }
 
-  Future<void> updateBio(String bio) async {
-    final currentUserId = _auth.getCurrentUserId();
-    if (currentUserId.isEmpty) return;
-
-    try {
-      // ✅ Delegate database update to DatabaseService
-      await _db.updateUserBio(bio);
-
-      // ✅ Update local cached user profile
-      if (_currentUser != null) {
-        _currentUser = _currentUser!.copyWith(bio: bio);
-      }
-
-      notifyListeners();
-    } catch (e) {
-      debugPrint('Error updating bio: $e');
-    }
-  }
+  // Update user bio
+  Future<void> updateBio(String bio) => _db.updateUserBioInDatabase(bio);
 
   /* ==================== POSTS ==================== */
   List<Post> _allPosts = [];
@@ -376,13 +383,13 @@ class DatabaseProvider extends ChangeNotifier {
     await _db.reportUser(postId, userId);
   }
 
-  Future<void> deleteUser(String userId) async {
-    await _db.deleteUser(userId);
-    if (_currentUser?.id == userId) {
-      _currentUser = null;
-    }
-    notifyListeners();
-  }
+  // Future<void> deleteUser(String userId) async {
+  //   await _db.deleteUser(userId);
+  //   if (_currentUser?.id == userId) {
+  //     _currentUser = null;
+  //   }
+  //   notifyListeners();
+  // }
 
   /* ==================== SEARCH USERS ==================== */
   List<UserProfile> _searchResults = [];

@@ -116,7 +116,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
                           context,
                           listen: false,
                         );
-                        await db.deleteUser(_auth.getCurrentUserId());
+                        //await db.deleteUser(_auth.getCurrentUserId());
 
                         if (mounted) {
                           Navigator.pop(context); // Close dialog

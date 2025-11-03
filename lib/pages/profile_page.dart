@@ -26,6 +26,7 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+  // Providers
   late final databaseProvider = Provider.of<DatabaseProvider>(context, listen: false);
 
 
@@ -33,8 +34,10 @@ class _ProfilePageState extends State<ProfilePage> {
   UserProfile? user;
   String currentUserId = AuthService().getCurrentUserId();
 
-  //
+  // DOUBLE CHECK
   bool _isFollowing = false;
+
+  // Text controller for bio
   final bioTextController = TextEditingController();
 
   // loading..
@@ -51,12 +54,15 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> loadUser() async {
     user = await databaseProvider.getUserProfile(widget.userId);
-    if (user == null) return;
 
+    //DOUBLE CHECK
+    if (user == null) return;
+    //DOUBLE CHECK
     await databaseProvider.loadUserFollowers(widget.userId);
     await databaseProvider.loadUserFollowing(widget.userId);
     _isFollowing = databaseProvider.isFollowing(widget.userId);
 
+    // finishes loading
     setState(() {
       _isLoading = false;
     });
@@ -75,10 +81,19 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  // Save updated bio
   Future<void> _saveBio() async {
+
+    // start loading...
     setState(() => _isLoading = true);
+
+    // update bio
     await databaseProvider.updateBio(bioTextController.text);
+
+    // reload user
     await loadUser();
+
+    // finished loading
     setState(() => _isLoading = false);
   }
 
@@ -110,6 +125,8 @@ class _ProfilePageState extends State<ProfilePage> {
   // BUILD UI
   @override
   Widget build(BuildContext context) {
+
+    // DOUBLE CHECK
     final allUserPosts = databaseProvider.getUserPosts(widget.userId);
     final followerCount = databaseProvider.getFollowerCount(widget.userId);
     final followingCount = databaseProvider.getFollowingCount(widget.userId);
@@ -150,7 +167,7 @@ class _ProfilePageState extends State<ProfilePage> {
             child: user!.profilePhotoUrl.isNotEmpty
                 ?
             CircleAvatar(
-              radius: 50,
+              radius: 56,
               backgroundImage: NetworkImage(user!.profilePhotoUrl),
             )
                 :
@@ -180,17 +197,19 @@ class _ProfilePageState extends State<ProfilePage> {
 
           const SizedBox(height: 28),
 
-          // FOLLOW BUTTON
+          // Follow / Unfollow button
           if (user!.id != currentUserId)
             MyFollowButton(onPressed: _toggleFollow, isFollowing: _isFollowing),
 
-          // BIO
+          // BIO Text
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 28.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text("Bio", style: TextStyle(color: Theme.of(context).colorScheme.primary)),
+
+                // EDIT BIO
                 if (user!.id == currentUserId)
                   GestureDetector(
                     onTap: _showEditBioBox,
@@ -202,7 +221,9 @@ class _ProfilePageState extends State<ProfilePage> {
 
           const SizedBox(height: 7),
 
-          MyBioBox(text: user!.bio),
+          // Bio Box
+          MyBioBox(text: _isLoading ? '...' : user!.bio),
+
           Padding(
             padding: const EdgeInsets.only(left: 28.0, top: 28.0),
             child: Text("Posts", style: TextStyle(color: Theme.of(context).colorScheme.primary)),

@@ -34,6 +34,7 @@ class MyInputAlertBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Alert dialog
     return AlertDialog(
       // Rounded corners
       shape: const RoundedRectangleBorder(
@@ -46,21 +47,30 @@ class MyInputAlertBox extends StatelessWidget {
       // Content: Text field
       content: TextField(
         controller: textController,
+
+        // Limit characters
         maxLength: 140,
         maxLines: 3,
+
         decoration: InputDecoration(
-          // Border when unselected
+
+          // Border when text field is unselected
           enabledBorder: OutlineInputBorder(
             borderSide: BorderSide(color: Theme.of(context).colorScheme.tertiary),
             borderRadius: BorderRadius.circular(14),
           ),
-          // Border when focused
+
+          // Border when text field is focused
           focusedBorder: OutlineInputBorder(
             borderSide: BorderSide(color: Theme.of(context).colorScheme.primary),
             borderRadius: BorderRadius.circular(14),
           ),
+
+          // hint text
           hintText: hintText,
           hintStyle: TextStyle(color: Theme.of(context).colorScheme.primary),
+
+          // Color inside of text field
           fillColor: Theme.of(context).colorScheme.secondary,
           filled: true,
           counterStyle: TextStyle(color: Theme.of(context).colorScheme.primary),
@@ -72,8 +82,11 @@ class MyInputAlertBox extends StatelessWidget {
         // Cancel button
         TextButton(
           onPressed: () {
-            Navigator.pop(context); // Close box
-            textController.clear(); // Clear controller
+            // close box
+            Navigator.pop(context);
+
+            // clear controller
+            textController.clear();
           },
           child: const Text("Cancel"),
         ),
@@ -81,9 +94,14 @@ class MyInputAlertBox extends StatelessWidget {
         // Confirm button
         TextButton(
           onPressed: () {
-            Navigator.pop(context); // Close box
-            onPressed?.call(); // Execute passed function
-            textController.clear(); // Clear controller
+            // close box
+            Navigator.pop(context);
+
+            // execute function
+            onPressed!.call();
+
+            // clear controller
+            textController.clear();
           },
           child: Text(onPressedText),
         ),
