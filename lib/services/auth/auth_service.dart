@@ -53,11 +53,11 @@ class AuthService {
       if (authResponse.user == null) throw Exception("Registration failed.");
 
 
-      // 3️⃣ Sign in automatically
-      await _auth.signInWithPassword(
-        email: email,
-        password: password,
-      );
+      // // 3️⃣ Sign in automatically
+      // await _auth.signInWithPassword(
+      //   email: email,
+      //   password: password,
+      // );
 
       return authResponse;
     } on AuthException catch (e) {

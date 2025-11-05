@@ -5,6 +5,23 @@ import '../models/post.dart';
 import '../services/database/database_provider.dart';
 import '../components/my_input_alert_box.dart';
 import '../services/auth/auth_service.dart';
+/*
+
+POST TILE
+
+All posts will be displayed using this post tile widget.
+
+--------------------------------------------------------------------------------
+
+To use this widget, you need:
+
+- The post
+- a function for onPostTap (to go the individual post to see it's comments)
+- a function for onUserTap (to go to user's profile page)
+
+
+ */
+
 
 class MyPostTile extends StatefulWidget {
   final Post post;
@@ -14,7 +31,7 @@ class MyPostTile extends StatefulWidget {
   const MyPostTile({
     super.key,
     required this.post,
-    required this.onUserTap,
+    this.onUserTap,
     required this.onPostTap,
   });
 
@@ -23,17 +40,26 @@ class MyPostTile extends StatefulWidget {
 }
 
 class _MyPostTileState extends State<MyPostTile> {
+
+  // providers
+  late final listeningProvider = Provider.of<DatabaseProvider>(context);
+  late final databaseProvider = Provider.of<DatabaseProvider>(context, listen: false);
+
+
+  // DOUBLE CHECK
   final _commentController = TextEditingController();
   late Timer _timer;
 
+  // DOUBLE CHECK
   @override
   void initState() {
     super.initState();
 
+    // Double check
     // Load comments after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<DatabaseProvider>();
-      provider.loadComments(widget.post.id);
+      provider.loadComments(widget.post.id!);
     });
 
     // Auto-update "time ago" every minute
@@ -42,6 +68,7 @@ class _MyPostTileState extends State<MyPostTile> {
     });
   }
 
+  // DOUBLE CHECK
   @override
   void dispose() {
     _timer.cancel();
@@ -49,10 +76,16 @@ class _MyPostTileState extends State<MyPostTile> {
     super.dispose();
   }
 
+  // user tapped like, or unlike
   void _toggleLikePost() async {
-    await context.read<DatabaseProvider>().toggleLike(widget.post.id);
+    try {
+      await databaseProvider.toggleLike(widget.post.id!);
+    } catch (e) {
+      print(e);
+    }
   }
 
+  // DOUBLE CHECK
   void _openNewCommentBox() {
     final commentController = TextEditingController();
 
@@ -67,7 +100,7 @@ class _MyPostTileState extends State<MyPostTile> {
 
           try {
             await context.read<DatabaseProvider>().addComment(
-              widget.post.id,
+              widget.post.id!,
               text,
             );
           } catch (e) {
@@ -85,42 +118,64 @@ class _MyPostTileState extends State<MyPostTile> {
     });
   }
 
+  // Show options for post
   void _showOptions() {
     final currentUserId = AuthService().getCurrentUserId();
     final isOwnPost = widget.post.userId == currentUserId;
 
+    // show options
     showModalBottomSheet(
       context: context,
       builder: (context) => SafeArea(
         child: Wrap(
           children: [
-            if (isOwnPost)
-              ListTile(
-                leading: const Icon(Icons.delete),
-                title: const Text("Delete"),
-                onTap: () async {
-                  Navigator.pop(context);
-                  await context.read<DatabaseProvider>().deletePost(widget.post.id);
-                },
-              )
-            else ...[
-              ListTile(
-                leading: const Icon(Icons.report),
-                title: const Text("Report"),
-                onTap: () {
-                  Navigator.pop(context);
-                  _reportPostConfirmationBox();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.block),
-                title: const Text("Block"),
-                onTap: () {
-                  Navigator.pop(context);
-                  _blockUserConfirmationBox();
-                },
-              ),
-            ],
+            isOwnPost
+            // THIS POST BELONGS TO USER
+                ?
+            // Delete button
+            ListTile(
+              leading: const Icon(Icons.delete),
+              title: const Text("Delete"),
+              onTap: () async {
+                // pop option box
+                Navigator.pop(context);
+
+                // handle delete action
+                await databaseProvider.deletePost(widget.post.id!);
+              },
+            )
+            // THIS POST DOES NOT BELONG TO USER
+                :
+            // Report button
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.report),
+                  title: const Text("Report"),
+                  onTap: () {
+                    // pop option box
+                    Navigator.pop(context);
+
+                    // handle report action
+                    _reportPostConfirmationBox();
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.block),
+                  title: const Text("Block"),
+                  onTap: () {
+                    // pop option box
+                    Navigator.pop(context);
+
+                    // handle block action
+                    _blockUserConfirmationBox();
+                  },
+                ),
+              ],
+            ),
+
+            // Always show cancel
             ListTile(
               leading: const Icon(Icons.cancel),
               title: const Text("Cancel"),
@@ -132,6 +187,7 @@ class _MyPostTileState extends State<MyPostTile> {
     );
   }
 
+  // DOUBLE CHECK
   void _reportPostConfirmationBox() {
     showDialog(
       context: context,
@@ -146,7 +202,7 @@ class _MyPostTileState extends State<MyPostTile> {
           TextButton(
             onPressed: () async {
               await context.read<DatabaseProvider>().reportUser(
-                widget.post.id,
+                widget.post.id!,
                 widget.post.userId,
               );
               if (!mounted) return;
@@ -162,6 +218,7 @@ class _MyPostTileState extends State<MyPostTile> {
     );
   }
 
+  // DOUBLE CHECK
   void _blockUserConfirmationBox() {
     showDialog(
       context: context,
@@ -175,7 +232,7 @@ class _MyPostTileState extends State<MyPostTile> {
           ),
           TextButton(
             onPressed: () async {
-              await context.read<DatabaseProvider>().blockUser(widget.post.userId);
+              // await context.read<DatabaseProvider>().blockUser(widget.post.userId);
               if (!mounted) return;
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
@@ -189,6 +246,7 @@ class _MyPostTileState extends State<MyPostTile> {
     );
   }
 
+  // DOUBLE CHECK
   String timeAgo(DateTime createdAt) {
     // Convert both to UTC to avoid timezone drift
     final now = DateTime.now().toUtc();
@@ -203,138 +261,178 @@ class _MyPostTileState extends State<MyPostTile> {
     return '${createdAt.day}/${createdAt.month}/${createdAt.year}';
   }
 
+
+  // BUILD UI
   @override
   Widget build(BuildContext context) {
-    return Consumer<DatabaseProvider>(
-      builder: (context, dbProvider, _) {
-        final likedByCurrentUser = dbProvider.isPostLikedByCurrentUser(widget.post.id);
-        final likeCount = dbProvider.getLikeCount(widget.post.id);
-        final commentCount = dbProvider.getComments(widget.post.id).length;
 
-        return GestureDetector(
-          onTap: widget.onPostTap,
-          child: Container(
-            width: double.infinity,
-            margin: const EdgeInsets.symmetric(vertical: 7),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(7),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+    // does the current user like this post?
+    bool likedByCurrentUser = listeningProvider.isPostLikedByCurrentUser(widget.post.id!);
+
+    // listen to like count
+    int likeCount = listeningProvider.getLikeCount(widget.post.id!);
+
+    // DOUBLE CHECK
+    int commentCount = listeningProvider.getComments(widget.post.id!).length;
+
+
+    return GestureDetector(
+      onTap: widget.onPostTap,
+      child: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.symmetric(vertical: 7),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(7),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+
+                  //Row
+                  Row(
                     children: [
-                      GestureDetector(
-                        onTap: widget.onUserTap,
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.person,
+                      //Profile picture
+                      Icon(
+                        Icons.person,
+                        color: Theme.of(context).colorScheme.primary,
+                        size: 40,
+                      ),
+
+                      const SizedBox(width: 7),
+
+                      // Column
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+
+                          // Name
+                          Text(
+                            widget.post.name,
+                            style: TextStyle(
                               color: Theme.of(context).colorScheme.primary,
-                              size: 40,
+                              fontWeight: FontWeight.bold,
                             ),
-                            const SizedBox(width: 8),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  widget.post.name,
-                                  style: TextStyle(
-                                    color: Theme.of(context).colorScheme.primary,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Text(
-                                  '@${widget.post.username}',
-                                  style: TextStyle(
-                                    color: Theme.of(context).colorScheme.primary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const Spacer(),
-                            GestureDetector(
-                              onTap: _showOptions,
-                              child: Icon(
-                                Icons.more_horiz,
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        widget.post.message,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onBackground,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  width: double.infinity,
-                  color: Theme.of(context).colorScheme.surface,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Row(
-                    children: [
-                      GestureDetector(
-                        onTap: _toggleLikePost,
-                        child: likedByCurrentUser
-                            ? const Icon(Icons.favorite, color: Colors.red)
-                            : Icon(
-                          Icons.favorite_border,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      SizedBox(
-                        width: 24,
-                        child: Text(
-                          likeCount > 0 ? likeCount.toString() : '',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.primary,
                           ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      GestureDetector(
-                        onTap: _openNewCommentBox,
-                        child: Icon(
-                          Icons.comment,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      SizedBox(
-                        width: 24,
-                        child: Text(
-                          commentCount > 0 ? commentCount.toString() : '',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.primary,
+
+                          // Username
+                          Text(
+                            '@${widget.post.username}',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
                           ),
-                          textAlign: TextAlign.center,
-                        ),
+                        ],
                       ),
+
                       const Spacer(),
-                      Text(
-                        timeAgo(widget.post.createdAt),
-                        style: TextStyle(color: Theme.of(context).colorScheme.primary),
+
+                      // buttons -> Options
+                      GestureDetector(
+                        onTap: _showOptions,
+                        child: Icon(
+                          Icons.more_horiz,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
                       ),
                     ],
                   ),
-                ),
-              ],
+
+                  const SizedBox(height: 14),
+
+                  // Post message
+                  Text(
+                    widget.post.message,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.inversePrimary,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        );
-      },
+
+
+            // like / comment row decoration
+            Container(
+              width: double.infinity,
+              color: Theme.of(context).colorScheme.surface,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+
+              // Buttons -> Like / Comment + Timestamp
+              child: Row(
+                children: [
+
+                  // Like Button
+                  GestureDetector(
+                    onTap: _toggleLikePost,
+                    child:
+                    likedByCurrentUser
+                        ?
+                    const Icon(Icons.favorite, color: Colors.red)
+                        :
+                    Icon(
+                      Icons.favorite_border,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+
+                  const SizedBox(width: 7),
+
+                  // Like count
+                  SizedBox(
+                    width: 24,
+                    child: Text(
+                      likeCount != 0 ? likeCount.toString() : '',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+
+                  const SizedBox(width: 14),
+
+                  // Comment box
+                  GestureDetector(
+                    onTap: _openNewCommentBox,
+                    child: Icon(
+                      Icons.comment,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+
+                  const SizedBox(width: 7),
+
+                  // Comment Count
+                  SizedBox(
+                    width: 24,
+                    child: Text(
+                      commentCount > 0 ? commentCount.toString() : '',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+
+                  const Spacer(),
+
+                  // Timestamp
+                  Text(
+                    timeAgo(widget.post.createdAt),
+                    style: TextStyle(color: Theme.of(context).colorScheme.primary),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

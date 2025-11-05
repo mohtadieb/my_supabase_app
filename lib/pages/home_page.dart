@@ -5,6 +5,14 @@ import '../services/database/database_provider.dart';
 import '../components/my_input_alert_box.dart';
 import '../components/my_post_tile.dart';
 import '../helper/navigate_pages.dart';
+/*
+
+HOME PAGE
+
+This is the main page of the app, it displays a list of all the posts.
+
+
+ */
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -14,20 +22,29 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin {
-  late final listeningProvider = Provider.of<DatabaseProvider>(context);
-  late final databaseProvider = Provider.of<DatabaseProvider>(context, listen: false);
 
+  // Providers
+  late final databaseProvider = Provider.of<DatabaseProvider>(context, listen: false);
+  late final listeningProvider = Provider.of<DatabaseProvider>(context);
+
+  // Text controllers
   final TextEditingController _messageController = TextEditingController();
+
   late final TabController _tabController;
 
-
+  // on startup
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
 
-    // Load posts once after the first frame
-    databaseProvider.loadAllPosts();
+    // let's load all the post
+    loadAllPosts();
+  }
+
+  // load all posts
+  Future<void> loadAllPosts() async {
+    await databaseProvider.loadAllPosts();
   }
 
   @override
@@ -37,34 +54,44 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     super.dispose();
   }
 
-  void openPostMessageBox() {
-    final TextEditingController _messageController = TextEditingController();
+  // show post message dialog box
+  void _openPostMessageBox() {
+    final TextEditingController messageController = TextEditingController();
 
     showDialog(
       context: context,
       builder: (context) => MyInputAlertBox(
-        textController: _messageController,
+        textController: messageController,
         hintText: "What's on your mind?",
         onPressed: () async {
-          final text = _messageController.text.trim();
-          if (text.isEmpty) return;
+          // post in database
+          await postMessage(messageController.text.trim());
 
-          await context.read<DatabaseProvider>().postMessage(text);
-
-          _messageController.clear();
+          messageController.clear();
         },
         onPressedText: "Post",
       ),
     );
   }
 
+  // user wants to post a message
+  Future<void> postMessage(String message) async {
+    await databaseProvider.postMessage(message);
+  }
+
   @override
   Widget build(BuildContext context) {
+
+    // BUILD UI
     return Scaffold(
+
+      // Floating action button
       floatingActionButton: FloatingActionButton(
-        onPressed: openPostMessageBox,
+        onPressed: _openPostMessageBox,
         child: const Icon(Icons.add),
       ),
+
+      // Body: List of all posts
       body: Column(
         children: [
           Container(
@@ -82,19 +109,12 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             ),
           ),
           Expanded(
-            child: Consumer<DatabaseProvider>(
-              builder: (context, dbProvider, _) {
-                final allPosts = dbProvider.allPosts;
-                final followingPosts = dbProvider.followingPosts;
-
-                return TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildPostList(allPosts),
-                    _buildPostList(followingPosts),
-                  ],
-                );
-              },
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildPostList(listeningProvider.allPosts),
+                _buildPostList(listeningProvider.followingPosts),
+              ],
             ),
           ),
         ],
@@ -103,9 +123,14 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   }
 
   Widget _buildPostList(List<Post> posts) {
-    if (posts.isEmpty) return const Center(child: Text("Nothing here.."));
-
-    return ListView.builder(
+    // if it's empty
+    return (posts.isEmpty)
+        ?
+    // return Nothing here...
+    const Center(child: Text("Nothing here.."))
+        :
+     // else, return listview of posts
+     ListView.builder(
       itemCount: posts.length,
       itemBuilder: (context, index) {
         final post = posts[index];

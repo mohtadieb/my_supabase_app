@@ -28,10 +28,11 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   // Providers
   late final databaseProvider = Provider.of<DatabaseProvider>(context, listen: false);
-
+  late final listeningProvider = Provider.of<DatabaseProvider>(context);
 
   // user info
   UserProfile? user;
+
   String currentUserId = AuthService().getCurrentUserId();
 
   // DOUBLE CHECK
@@ -126,8 +127,10 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
 
+    // get user posts
+    final allUserPosts = listeningProvider.getUserPosts(widget.userId);
+
     // DOUBLE CHECK
-    final allUserPosts = databaseProvider.getUserPosts(widget.userId);
     final followerCount = databaseProvider.getFollowerCount(widget.userId);
     final followingCount = databaseProvider.getFollowingCount(widget.userId);
 
@@ -209,7 +212,7 @@ class _ProfilePageState extends State<ProfilePage> {
               children: [
                 Text("Bio", style: TextStyle(color: Theme.of(context).colorScheme.primary)),
 
-                // EDIT BIO
+                // EDIT BIO ICON
                 if (user!.id == currentUserId)
                   GestureDetector(
                     onTap: _showEditBioBox,
@@ -228,23 +231,30 @@ class _ProfilePageState extends State<ProfilePage> {
             padding: const EdgeInsets.only(left: 28.0, top: 28.0),
             child: Text("Posts", style: TextStyle(color: Theme.of(context).colorScheme.primary)),
           ),
+
+          // list of posts from user
           allUserPosts.isEmpty
-              ? Center(
+              ?
+          // user posts is empty
+          Center(
             child: Padding(
               padding: const EdgeInsets.all(14.0),
               child: Text("No posts yet..",
                   style: TextStyle(color: Theme.of(context).colorScheme.primary)),
             ),
           )
-              : ListView.builder(
+              :
+
+          // user posts is NOT empty
+          ListView.builder(
             itemCount: allUserPosts.length,
             physics: const NeverScrollableScrollPhysics(),
             shrinkWrap: true,
             itemBuilder: (context, index) {
+              // get individual post
               final post = allUserPosts[index];
               return MyPostTile(
                 post: post,
-                onUserTap: () {}, // optional: navigate to author profile
                 onPostTap: () => goPostPage(context, post),
               );
             },

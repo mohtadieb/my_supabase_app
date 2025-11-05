@@ -65,7 +65,7 @@ class _RegisterPageState extends State<RegisterPage> {
         name: nameController.text.trim(),
         email: emailController.text.trim(),
       );
-
+      print('mounted: $mounted');
       // Show success feedback
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -75,7 +75,7 @@ class _RegisterPageState extends State<RegisterPage> {
       }
     } catch (e) {
       if (mounted) {
-        hideLoadingCircle(context);
+        //hideLoadingCircle(context);
         // Show error dialog if register fails
         showErrorDialog(e.toString());
       }

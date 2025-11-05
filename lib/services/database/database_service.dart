@@ -16,7 +16,6 @@ This class handles all the data from and to supabase
 
  */
 
-
 import 'package:flutter/cupertino.dart';
 import 'package:my_supabase_app/services/auth/auth_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -31,8 +30,7 @@ class DatabaseService {
 
   /* ==================== USER PROFILE ==================== */
   // Save user in database
-  Future<void> saveUserInDatabase({required String name, required String email}) async {
-
+  Future<void> saveUserInDatabase({required String name, required String email,}) async {
     // get current userId
     String userId = _auth.currentUser!.id;
 
@@ -44,12 +42,12 @@ class DatabaseService {
 
     // Create user profile
     UserProfile user = UserProfile(
-        id: userId,
-        name: name,
-        email: email,
-        username: username,
-        bio: '',
-        createdAt: DateTime.now(),
+      id: userId,
+      name: name,
+      email: email,
+      username: username,
+      bio: '',
+      createdAt: DateTime.now(),
     );
 
     // convert user into map so that we can store in in supabase
@@ -67,10 +65,13 @@ class DatabaseService {
 
   // Get user from database
   Future<UserProfile?> getUserFromDatabase(String userId) async {
-
     // Retrieve user info from database
     try {
-      final userData = await _db.from('profiles').select().eq('id', userId).maybeSingle();
+      final userData = await _db
+          .from('profiles')
+          .select()
+          .eq('id', userId)
+          .maybeSingle();
       if (userData == null) return null;
 
       // Convert userData to user profile
@@ -83,7 +84,6 @@ class DatabaseService {
 
   // Update user bio
   Future<void> updateUserBioInDatabase(String bio) async {
-
     // Get current user Id
     String userId = AuthService().getCurrentUserId();
 
@@ -94,46 +94,47 @@ class DatabaseService {
     }
   }
 
-
   /* ==================== POSTS ==================== */
+
   /// Create a new post and return the inserted Post object
-  Future<Post?> postMessage(String message) async {
-    final userId = _auth.currentUser?.id;
-    if (userId == null || message.trim().isEmpty) return null;
+  Future<void> postMessageInDatabase(String message) async {
+    // if (userId == null || message.trim().isEmpty) return null;
 
+    // try post message
     try {
-      // Get user profile info
-      final profileData = await _db
-          .from('profiles')
-          .select('id, name, username')
-          .eq('id', userId)
-          .maybeSingle();
+      // get current userId
+      final userId = _auth.currentUser!.id;
 
-      if (profileData == null) return null;
+      // Get user profile info
+      final user = await getUserFromDatabase(userId);
+      if (user == null) throw Exception("User profile not found");
 
       // Insert post and return the inserted row
-      final insertedPost = await _db.from('posts').insert({
-        'user_id': userId, // ✅ Must match table column exactly
-        'name': profileData['name'],
-        'username': profileData['username'],
-        'message': message.trim(),
-        'created_at': DateTime.now().toIso8601String(),
-        'like_count': 0,
-        'liked_by': <String>[], // empty list for text[]
-      }).select().maybeSingle(); // ✅ return inserted row
+      Post newPost = Post(
+        //id: '', //database will autogenerate this
+        userId: userId,
+        name: user.name,
+        username: user.username,
+        message: message,
+        createdAt: DateTime.now().toUtc(),
+        likeCount: 0,
+        likedBy: [],
+      );
 
-      if (insertedPost == null) return null;
+      // Convert to Post object to map
+      Map<String, dynamic> newPostMap = newPost.toMap();
 
-      // Convert to Post model
-      return Post.fromMap(insertedPost);
+      // Add post map into database
+      await _db.from('posts').insert(newPostMap).select().single();
+
+      // catch any errors
     } catch (e) {
       print("Error posting message: $e");
-      return null;
     }
   }
 
   /// Delete a post
-  Future<void> deletePost(String postId) async {
+  Future<void> deletePostFromDatabase(String postId) async {
     try {
       await _db.from('posts').delete().eq('id', postId);
     } catch (e) {
@@ -142,13 +143,19 @@ class DatabaseService {
   }
 
   /// Get all posts
-  Future<List<Post>> getAllPosts() async {
+  Future<List<Post>> getAllPostsFromDatabase() async {
     try {
-      final List data = await _db
-          .from('posts')
-          .select('*, profiles(id, username, name)')
-          .order('created_at', ascending: false) as List;
+      final List data =
+          await _db
+                  // Go to collection "posts"
+                  .from('posts')
+                  // Select all fields
+                  .select()
+                  // Chronological order
+                  .order('created_at', ascending: false)
+              as List;
 
+      // Return as list of posts
       return data.map((e) => Post.fromMap(e)).toList();
     } catch (e) {
       print("Error fetching all posts: $e");
@@ -156,57 +163,150 @@ class DatabaseService {
     }
   }
 
+
   /// Get individual post
 
-
   /* ==================== LIKES ==================== */
+
   /// Toggle like for a post
-  //// Toggle like for a post and update liked_by array
-  Future<Post?> toggleLike(String userId, String postId) async {
+  // Future<Post?> toggleLikeInDatabase(String postId) async {
+  //   try {
+  //     // get current userId
+  //     String userId = _auth.currentUser!.id;
+  //
+  //     // Go to data for this post
+  //     final postData = await _db
+  //         .from('posts')
+  //         .select('id, like_count, liked_by')
+  //         .eq('id', postId)
+  //         .maybeSingle();
+  //
+  //     if (postData == null) return null;
+  //
+  //     // list of users who liked this post
+  //     List<String> likedBy = List<String>.from(postData['liked_by'] ?? []);
+  //
+  //     // get like count
+  //     int likeCount = postData['like_count'] ?? 0;
+  //
+  //     // execute like
+  //     if (likedBy.contains(userId)) {
+  //       // Unlike
+  //       likedBy.remove(userId);
+  //       likeCount = likeCount > 0 ? likeCount - 1 : 0;
+  //     } else {
+  //       // Like
+  //       likedBy.add(userId);
+  //       likeCount += 1;
+  //     }
+  //
+  //     // Update the post in DB
+  //     final updatedPost = await _db
+  //         .from('posts')
+  //         .update({
+  //       'liked_by': likedBy,
+  //       'like_count': likeCount,
+  //     })
+  //         .eq('id', postId)
+  //         .select()
+  //         .maybeSingle();
+  //
+  //     if (updatedPost == null) return null;
+  //
+  //     return Post.fromMap(updatedPost);
+  //   } catch (e) {
+  //     print('Error toggling like: $e');
+  //     return null;
+  //   }
+  // }
+
+  // FIREBASE VERSION
+  // Future<void> toggleLikeInDatabase(String postId) async {
+  //   try {
+  //     // get current userId
+  //     String userId = _auth.currentUser!.id;
+  //
+  //     // go to doc for this post
+  //     DocumentReference postDoc = _db.collection('posts').doc(postId);
+  //
+  //     // execute like
+  //     await _db.runTransaction((transaction) async {
+  //       // get post data
+  //       DocumentSnapshot postSnapshot = await transaction.get(postDoc);
+  //
+  //       // get like of users who like this post
+  //       List<String> likedBy = List<String>.from(snapshot['liked_by'] ?? []);
+  //
+  //       // get like count
+  //       int currentLikeCount = postSnapshot['like_count'];
+  //
+  //       // if user has not liked this post yet -> then like
+  //       if (!likedBy.contains(userId)) {
+  //         // add user to like list
+  //         likedBy.add(userId);
+  //
+  //         // increment the like count
+  //         currentLikeCount++;
+  //
+  //         // if user has already liked this post -> then unlike
+  //       } else {
+  //         // remove user from like list
+  //         likedBy.remove(userId);
+  //
+  //         // decrement like count
+  //         currentLikeCount--;
+  //       }
+  //
+  //       // update in database
+  //       transaction.update(postDoc, {
+  //         'like_count': currentLikeCount,
+  //         'liked_by': likedBy,
+  //       });
+  //     });
+  //   } catch (e) {}
+  // }
+
+  Future<void> toggleLikeInDatabase(String postId) async {
     try {
-      // Fetch current post
+      final userId = _auth.currentUser!.id;
+
+      // Step 1: Fetch the current post (like_count + liked_by)
       final postData = await _db
           .from('posts')
           .select('id, like_count, liked_by')
           .eq('id', postId)
           .maybeSingle();
 
-      if (postData == null) return null;
+      if (postData == null) {
+        print("⚠️ Post not found for id: $postId");
+        return;
+      }
 
+      // Step 2: Extract current values
       List<String> likedBy = List<String>.from(postData['liked_by'] ?? []);
       int likeCount = postData['like_count'] ?? 0;
 
-      if (likedBy.contains(userId)) {
-        // Unlike
-        likedBy.remove(userId);
-        likeCount = likeCount > 0 ? likeCount - 1 : 0;
-      } else {
-        // Like
+      // Step 3: Determine whether to like or unlike
+      if (!likedBy.contains(userId)) {
         likedBy.add(userId);
-        likeCount += 1;
+        likeCount++;
+      } else {
+        likedBy.remove(userId);
+        likeCount--;
       }
 
-      // Update the post in DB
-      final updatedPost = await _db
+      // Step 4: Update the database
+      await _db
           .from('posts')
-          .update({
-        'liked_by': likedBy,
-        'like_count': likeCount,
-      })
-          .eq('id', postId)
-          .select()
-          .maybeSingle();
-
-      if (updatedPost == null) return null;
-
-      return Post.fromMap(updatedPost);
+          .update({'like_count': likeCount, 'liked_by': likedBy})
+          .eq('id', postId);
     } catch (e) {
-      print('Error toggling like: $e');
-      return null;
+      print("❌ Error toggling like: $e");
     }
   }
 
-  Future<List<String>> getLikedPostIds(String userId, List<String> postIds) async {
+  /// EXTRA ///
+  Future<List<String>> getLikedPostIdsFromDatabase(String userId, List<String> postIds,) async {
     final likedPostIds = <String>[];
     if (postIds.isEmpty) return likedPostIds;
 
@@ -230,7 +330,9 @@ class DatabaseService {
 
     return likedPostIds;
   }
-//* ==================== COMMENTS ==================== */
+
+  //* ==================== COMMENTS ==================== */
+
   Future<Comment?> addComment(String postId, String message) async {
     final userId = _auth.currentUser?.id;
     if (userId == null || message.trim().isEmpty) return null;
@@ -239,7 +341,8 @@ class DatabaseService {
     if (user == null) return null;
 
     final comment = Comment(
-      id: '', // Supabase auto-generates if empty
+      id: '',
+      // Supabase auto-generates if empty
       postId: postId,
       userId: userId,
       name: user.name,
@@ -258,7 +361,8 @@ class DatabaseService {
       return Comment(
         id: response['id'] ?? '',
         postId: response['post_id'] ?? '',
-        userId: response['user_id'] ?? '', // <-- using user_id
+        userId: response['user_id'] ?? '',
+        // <-- using user_id
         name: response['name'] ?? '',
         username: response['username'] ?? '',
         message: response['message'] ?? '',
@@ -281,17 +385,20 @@ class DatabaseService {
           .order('created_at', ascending: true);
 
       return (response as List<dynamic>)
-          .map((c) => Comment(
-        id: c['id'] ?? '',
-        postId: c['post_id'] ?? '',
-        userId: c['user_id'] ?? '', // <-- using user_id
-        name: c['name'] ?? '',
-        username: c['username'] ?? '',
-        message: c['message'] ?? '',
-        createdAt: c['created_at'] != null
-            ? DateTime.parse(c['created_at'])
-            : DateTime.now(),
-      ))
+          .map(
+            (c) => Comment(
+              id: c['id'] ?? '',
+              postId: c['post_id'] ?? '',
+              userId: c['user_id'] ?? '',
+              // <-- using user_id
+              name: c['name'] ?? '',
+              username: c['username'] ?? '',
+              message: c['message'] ?? '',
+              createdAt: c['created_at'] != null
+                  ? DateTime.parse(c['created_at'])
+                  : DateTime.now(),
+            ),
+          )
           .toList();
     } catch (e) {
       print("Error loading comments: $e");
@@ -307,8 +414,7 @@ class DatabaseService {
     }
   }
 
-
-/* ==================== FOLLOW / UNFOLLOW ==================== */
+  /* ==================== FOLLOW / UNFOLLOW ==================== */
   Future<void> followUser(String targetUserId) async {
     final currentUserId = _auth.currentUser?.id;
     if (currentUserId == null) return;
@@ -351,7 +457,6 @@ class DatabaseService {
     }
   }
 
-
   Future<List<String>> getFollowingUserIds(String userId) async {
     try {
       final List data = await _db
@@ -369,10 +474,10 @@ class DatabaseService {
     final currentUserId = _auth.currentUser?.id;
     if (currentUserId == null) return;
 
-    await _db
-        .from('followers')
-        .delete()
-        .match({'follower_id': userId, 'following_id': currentUserId});
+    await _db.from('followers').delete().match({
+      'follower_id': userId,
+      'following_id': currentUserId,
+    });
   }
 
   /* ==================== REPORT / BLOCK ==================== */
@@ -438,15 +543,19 @@ class DatabaseService {
     }
   }
 
-  Future<void> removeLikesBetweenUsers(String currentUserId, String blockedUserId) async {
+  Future<void> removeLikesBetweenUsers(
+    String currentUserId,
+    String blockedUserId,
+  ) async {
     // 1️⃣ Get all post IDs by blocked user
     final blockedUserPosts = await _db
         .from('posts')
         .select('id')
         .eq('user_id', blockedUserId);
 
-    final blockedPostIds =
-    (blockedUserPosts as List).map((p) => p['id'] as String).toList();
+    final blockedPostIds = (blockedUserPosts as List)
+        .map((p) => p['id'] as String)
+        .toList();
 
     // 2️⃣ Get all post IDs by current user
     final currentUserPosts = await _db
@@ -454,8 +563,9 @@ class DatabaseService {
         .select('id')
         .eq('user_id', currentUserId);
 
-    final currentPostIds =
-    (currentUserPosts as List).map((p) => p['id'] as String).toList();
+    final currentPostIds = (currentUserPosts as List)
+        .map((p) => p['id'] as String)
+        .toList();
 
     // 3️⃣ Remove likes that current user gave to blocked user’s posts
     if (blockedPostIds.isNotEmpty) {
@@ -479,8 +589,7 @@ class DatabaseService {
     // You can call an RPC or recalculate in Dart if you maintain counts manually.
   }
 
-
-/* ==================== DELETE USER ==================== */
+  /* ==================== DELETE USER ==================== */
   Future<void> deleteUser(String userId) async {
     try {
       await _db.from('posts').delete().eq('userId', userId);
@@ -500,8 +609,7 @@ class DatabaseService {
     }
   }
 
-
-/* ==================== SEARCH USERS ==================== */
+  /* ==================== SEARCH USERS ==================== */
   Future<List<UserProfile>> searchUsers(String searchTerm) async {
     if (searchTerm.isEmpty) return [];
 
@@ -518,7 +626,7 @@ class DatabaseService {
     }
   }
 
-/* ==================== TIME ==================== */
+  /* ==================== TIME ==================== */
 
   Future<DateTime?> getServerTime() async {
     try {
@@ -537,7 +645,4 @@ class DatabaseService {
       return null;
     }
   }
-
 }
-
-

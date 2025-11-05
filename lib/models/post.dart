@@ -1,5 +1,5 @@
 class Post {
-  final String id;
+  final String? id;
   final String userId;
   final String name;
   final String username;
@@ -9,7 +9,7 @@ class Post {
   final List<String> likedBy; // ✅ list of user IDs who liked
 
   Post({
-    required this.id,
+    this.id,
     required this.userId,
     required this.name,
     required this.username,
@@ -28,7 +28,7 @@ class Post {
       username: map['username'] ?? '',
       message: map['message'] ?? '',
       createdAt: map['created_at'] != null
-          ? DateTime.tryParse(map['created_at'].toString()) ?? DateTime.now()
+          ? DateTime.parse(map['created_at']).toLocal() // ✅ convert to local time
           : DateTime.now(),
       likeCount: map['like_count'] ?? 0,
       likedBy: List<String>.from(map['liked_by'] ?? []),
@@ -38,7 +38,7 @@ class Post {
   // Convert a Post object to a map (to store in Database)
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
+      // 'id': id,
       'user_id': userId,
       'name': name,
       'username': username,
@@ -50,11 +50,12 @@ class Post {
   }
 
   Post copyWith({
+    String? id,
     int? likeCount,
     List<String>? likedBy,
   }) {
     return Post(
-      id: id,
+      id: id ?? this.id,
       userId: userId,
       name: name,
       username: username,

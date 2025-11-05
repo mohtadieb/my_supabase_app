@@ -1,4 +1,4 @@
-// Navigation helper functions (Supabase Ready)
+// Navigation helper functions
 import 'package:flutter/material.dart';
 import '../pages/home_page.dart';
 import '../pages/account_settings_page.dart';
@@ -7,7 +7,7 @@ import '../pages/post_page.dart';
 import '../pages/profile_page.dart';
 import '../models/post.dart';
 
-/// Navigate to a user's profile page (Supabase UID)
+/// Navigate to a user's profile page
 void goUserPage(BuildContext context, String userId) {
   Navigator.push(
     context,

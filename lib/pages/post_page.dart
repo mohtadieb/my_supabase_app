@@ -1,7 +1,12 @@
 /*
 POST PAGE
 
-Displays an individual post with all its comments.
+This page displays:
+
+- individual's posts
+- comments on this post
+
+
 */
 
 import 'package:flutter/material.dart';
@@ -29,7 +34,7 @@ class _PostPageState extends State<PostPage> {
   @override
   void initState() {
     super.initState();
-    databaseProvider.loadComments(widget.post.id);
+    databaseProvider.loadComments(widget.post.id!);
   }
 
   @override
@@ -38,13 +43,20 @@ class _PostPageState extends State<PostPage> {
     super.dispose();
   }
 
+  // BUILD UI
   @override
   Widget build(BuildContext context) {
+
+    // SCAFFOLD
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
+
+      // App bar
       appBar: AppBar(
         foregroundColor: Theme.of(context).colorScheme.primary,
       ),
+
+      // Body
       body: Column(
         children: [
           // Post tile
@@ -63,19 +75,20 @@ class _PostPageState extends State<PostPage> {
             child: Consumer<DatabaseProvider>(
               builder: (context, listeningProvider, _) {
                 final allComments =
-                listeningProvider.getComments(widget.post.id);
+                listeningProvider.getComments(widget.post.id!);
 
-                if (allComments.isEmpty) {
-                  return Center(
-                    child: Text(
-                      "No comments yet...",
-                      style: TextStyle(
-                          color: Theme.of(context).colorScheme.primary),
+                return allComments.isEmpty
+                    ?
+                Center(
+                  child: Text(
+                    "No comments yet...",
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
                     ),
-                  );
-                }
-
-                return ListView.builder(
+                  ),
+                )
+                    :
+                ListView.builder(
                   itemCount: allComments.length,
                   itemBuilder: (context, index) {
                     final comment = allComments[index];
@@ -89,41 +102,42 @@ class _PostPageState extends State<PostPage> {
             ),
           ),
 
+          // DOUBLE CHECK
           // Add comment input
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _commentController,
-                    decoration: InputDecoration(
-                      hintText: "Add a comment...",
-                      fillColor: Theme.of(context).colorScheme.secondary,
-                      filled: true,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
-                    ),
-                  ),
-                ),
-                IconButton(
-                  icon: Icon(Icons.send,
-                      color: Theme.of(context).colorScheme.primary),
-                  onPressed: () async {
-                    final text = _commentController.text.trim();
-                    if (text.isEmpty) return;
-
-                    await databaseProvider.addComment(widget.post.id, text);
-                    _commentController.clear();
-                  },
-                ),
-              ],
-            ),
-          ),
+          // Padding(
+          //   padding: const EdgeInsets.all(8.0),
+          //   child: Row(
+          //     children: [
+          //       Expanded(
+          //         child: TextField(
+          //           controller: _commentController,
+          //           decoration: InputDecoration(
+          //             hintText: "Add a comment...",
+          //             fillColor: Theme.of(context).colorScheme.secondary,
+          //             filled: true,
+          //             border: OutlineInputBorder(
+          //               borderRadius: BorderRadius.circular(12),
+          //               borderSide: BorderSide.none,
+          //             ),
+          //             contentPadding: const EdgeInsets.symmetric(
+          //                 horizontal: 12, vertical: 8),
+          //           ),
+          //         ),
+          //       ),
+          //       IconButton(
+          //         icon: Icon(Icons.send,
+          //             color: Theme.of(context).colorScheme.primary),
+          //         onPressed: () async {
+          //           final text = _commentController.text.trim();
+          //           if (text.isEmpty) return;
+          //
+          //           await databaseProvider.addComment(widget.post.id!, text);
+          //           _commentController.clear();
+          //         },
+          //       ),
+          //     ],
+          //   ),
+          // ),
         ],
       ),
     );
