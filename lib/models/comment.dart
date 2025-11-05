@@ -1,5 +1,5 @@
 /*
-COMMENT MODEL (Supabase Version, using `userId` instead of `uid`)
+COMMENT MODEL
 
 This model defines what every comment should have in the Supabase setup.
 It aligns with your `profiles.id` as the foreign key for the commenting user.
@@ -8,7 +8,7 @@ It aligns with your `profiles.id` as the foreign key for the commenting user.
 class Comment {
   final String id;
   final String postId;
-  final String userId; // ✅ Renamed from uid -> userId (matches profiles.id)
+  final String userId;
   final String name;
   final String username;
   final String message;
@@ -24,36 +24,43 @@ class Comment {
     required this.createdAt,
   });
 
-  // Supabase -> App
+  /// ✅ Supabase -> App
   factory Comment.fromMap(Map<String, dynamic> data) {
     return Comment(
       id: data['id']?.toString() ?? '',
       postId: data['post_id'] ?? '',
-      userId: data['user_id'] ?? '', // ✅ changed key name
+      userId: data['user_id'] ?? '',
       name: data['name'] ?? '',
       username: data['username'] ?? '',
       message: data['message'] ?? '',
-      createdAt: DateTime.tryParse(data['created_at'] ?? '') ?? DateTime.now(),
+      createdAt: data['created_at'] != null
+          ? DateTime.tryParse(data['created_at'].toString())?.toLocal() ?? DateTime.now()
+          : DateTime.now(),
     );
   }
 
-  // App -> Supabase
+  /// ✅ App -> Supabase
   Map<String, dynamic> toMap() {
-    return {
+    final map = {
       'post_id': postId,
-      'user_id': userId, // ✅ changed key name
+      'user_id': userId,
       'name': name,
       'username': username,
       'message': message,
       'created_at': createdAt.toIso8601String(),
     };
+
+    // ⚙️ Include 'id' only if it's non-empty
+    if (id.isNotEmpty) map['id'] = id;
+
+    return map;
   }
 
-  // Copy with updated fields
+  /// ✅ Copy with updated fields
   Comment copyWith({
     String? id,
     String? postId,
-    String? userId, // ✅ updated param name
+    String? userId,
     String? name,
     String? username,
     String? message,

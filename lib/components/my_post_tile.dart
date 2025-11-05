@@ -59,7 +59,7 @@ class _MyPostTileState extends State<MyPostTile> {
     // Load comments after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<DatabaseProvider>();
-      provider.loadComments(widget.post.id!);
+      provider.loadComments(widget.post.id);
     });
 
     // Auto-update "time ago" every minute
@@ -79,7 +79,7 @@ class _MyPostTileState extends State<MyPostTile> {
   // user tapped like, or unlike
   void _toggleLikePost() async {
     try {
-      await databaseProvider.toggleLike(widget.post.id!);
+      await databaseProvider.toggleLike(widget.post.id);
     } catch (e) {
       print(e);
     }
@@ -100,7 +100,7 @@ class _MyPostTileState extends State<MyPostTile> {
 
           try {
             await context.read<DatabaseProvider>().addComment(
-              widget.post.id!,
+              widget.post.id,
               text,
             );
           } catch (e) {
@@ -141,7 +141,7 @@ class _MyPostTileState extends State<MyPostTile> {
                 Navigator.pop(context);
 
                 // handle delete action
-                await databaseProvider.deletePost(widget.post.id!);
+                await databaseProvider.deletePost(widget.post.id);
               },
             )
             // THIS POST DOES NOT BELONG TO USER
@@ -202,7 +202,7 @@ class _MyPostTileState extends State<MyPostTile> {
           TextButton(
             onPressed: () async {
               await context.read<DatabaseProvider>().reportUser(
-                widget.post.id!,
+                widget.post.id,
                 widget.post.userId,
               );
               if (!mounted) return;
@@ -267,13 +267,13 @@ class _MyPostTileState extends State<MyPostTile> {
   Widget build(BuildContext context) {
 
     // does the current user like this post?
-    bool likedByCurrentUser = listeningProvider.isPostLikedByCurrentUser(widget.post.id!);
+    bool likedByCurrentUser = listeningProvider.isPostLikedByCurrentUser(widget.post.id);
 
     // listen to like count
-    int likeCount = listeningProvider.getLikeCount(widget.post.id!);
+    int likeCount = listeningProvider.getLikeCount(widget.post.id);
 
     // DOUBLE CHECK
-    int commentCount = listeningProvider.getComments(widget.post.id!).length;
+    int commentCount = listeningProvider.getComments(widget.post.id).length;
 
 
     return GestureDetector(
@@ -306,28 +306,29 @@ class _MyPostTileState extends State<MyPostTile> {
 
                       const SizedBox(width: 7),
 
-                      // Column
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-
-                          // Name
-                          Text(
-                            widget.post.name,
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.primary,
-                              fontWeight: FontWeight.bold,
+                      GestureDetector(
+                        onTap: widget.onUserTap,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Name
+                            Text(
+                              widget.post.name,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ),
 
-                          // Username
-                          Text(
-                            '@${widget.post.username}',
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.primary,
+                            // Username
+                            Text(
+                              '@${widget.post.username}',
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
 
                       const Spacer(),

@@ -34,7 +34,7 @@ class _PostPageState extends State<PostPage> {
   @override
   void initState() {
     super.initState();
-    databaseProvider.loadComments(widget.post.id!);
+    databaseProvider.loadComments(widget.post.id);
   }
 
   @override
@@ -75,7 +75,7 @@ class _PostPageState extends State<PostPage> {
             child: Consumer<DatabaseProvider>(
               builder: (context, listeningProvider, _) {
                 final allComments =
-                listeningProvider.getComments(widget.post.id!);
+                listeningProvider.getComments(widget.post.id);
 
                 return allComments.isEmpty
                     ?
@@ -131,7 +131,7 @@ class _PostPageState extends State<PostPage> {
           //           final text = _commentController.text.trim();
           //           if (text.isEmpty) return;
           //
-          //           await databaseProvider.addComment(widget.post.id!, text);
+          //           await databaseProvider.addComment(widget.post.id, text);
           //           _commentController.clear();
           //         },
           //       ),

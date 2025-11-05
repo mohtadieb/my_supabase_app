@@ -1,15 +1,15 @@
 class Post {
-  final String? id;
+  final String id;
   final String userId;
   final String name;
   final String username;
   final String message;
   final DateTime createdAt;
   final int likeCount;
-  final List<String> likedBy; // ✅ list of user IDs who liked
+  final List<String> likedBy; // list of user IDs who liked
 
   Post({
-    this.id,
+    required this.id,
     required this.userId,
     required this.name,
     required this.username,
@@ -19,7 +19,7 @@ class Post {
     required this.likedBy,
   });
 
-  // Convert a Database document to a Post object (to use in our app)
+  // ✅ Convert from Supabase record → Dart object
   factory Post.fromMap(Map<String, dynamic> map) {
     return Post(
       id: map['id'].toString(),
@@ -27,18 +27,15 @@ class Post {
       name: map['name'] ?? '',
       username: map['username'] ?? '',
       message: map['message'] ?? '',
-      createdAt: map['created_at'] != null
-          ? DateTime.parse(map['created_at']).toLocal() // ✅ convert to local time
-          : DateTime.now(),
+      createdAt: DateTime.parse(map['created_at']).toLocal(),
       likeCount: map['like_count'] ?? 0,
       likedBy: List<String>.from(map['liked_by'] ?? []),
     );
   }
 
-  // Convert a Post object to a map (to store in Database)
+  // ✅ Convert Dart object → insert/update map
   Map<String, dynamic> toMap() {
-    return {
-      // 'id': id,
+    final map = {
       'user_id': userId,
       'name': name,
       'username': username,
@@ -47,10 +44,17 @@ class Post {
       'like_count': likeCount,
       'liked_by': likedBy,
     };
+
+    // ⚙️ include id only if it's a valid (non-empty) value
+    if (id.isNotEmpty) map['id'] = id;
+
+    return map;
   }
 
+  // ✅ Useful for local updates
   Post copyWith({
     String? id,
+    String? message,
     int? likeCount,
     List<String>? likedBy,
   }) {
@@ -59,7 +63,7 @@ class Post {
       userId: userId,
       name: name,
       username: username,
-      message: message,
+      message: message ?? this.message,
       createdAt: createdAt,
       likeCount: likeCount ?? this.likeCount,
       likedBy: likedBy ?? this.likedBy,

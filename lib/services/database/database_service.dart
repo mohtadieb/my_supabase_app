@@ -29,13 +29,17 @@ class DatabaseService {
   final _auth = Supabase.instance.client.auth;
 
   /* ==================== USER PROFILE ==================== */
-  // Save user in database
+
+  /// Save user in database
   Future<void> saveUserInDatabase({required String name, required String email,}) async {
     // get current userId
     String userId = _auth.currentUser!.id;
 
     // Generate a safe username
-    String username = email.split('@').first.trim();
+    String username = email
+        .split('@')
+        .first
+        .trim();
     if (username.isEmpty) {
       username = 'user_$userId';
     }
@@ -47,7 +51,7 @@ class DatabaseService {
       email: email,
       username: username,
       bio: '',
-      createdAt: DateTime.now(),
+      createdAt: DateTime.now().toUtc(),
     );
 
     // convert user into map so that we can store in in supabase
@@ -63,7 +67,7 @@ class DatabaseService {
     }
   }
 
-  // Get user from database
+  /// Get user from database
   Future<UserProfile?> getUserFromDatabase(String userId) async {
     // Retrieve user info from database
     try {
@@ -82,7 +86,7 @@ class DatabaseService {
     }
   }
 
-  // Update user bio
+  /// Update user bio
   Future<void> updateUserBioInDatabase(String bio) async {
     // Get current user Id
     String userId = AuthService().getCurrentUserId();
@@ -111,7 +115,7 @@ class DatabaseService {
 
       // Insert post and return the inserted row
       Post newPost = Post(
-        //id: '', //database will autogenerate this
+        id: '',
         userId: userId,
         name: user.name,
         username: user.username,
@@ -146,14 +150,14 @@ class DatabaseService {
   Future<List<Post>> getAllPostsFromDatabase() async {
     try {
       final List data =
-          await _db
-                  // Go to collection "posts"
-                  .from('posts')
-                  // Select all fields
-                  .select()
-                  // Chronological order
-                  .order('created_at', ascending: false)
-              as List;
+      await _db
+      // Go to collection "posts"
+          .from('posts')
+      // Select all fields
+          .select()
+      // Chronological order
+          .order('created_at', ascending: false)
+      as List;
 
       // Return as list of posts
       return data.map((e) => Post.fromMap(e)).toList();
@@ -168,7 +172,6 @@ class DatabaseService {
 
   /* ==================== LIKES ==================== */
 
-  /// Toggle like for a post
   // Future<Post?> toggleLikeInDatabase(String postId) async {
   //   try {
   //     // get current userId
@@ -266,6 +269,7 @@ class DatabaseService {
   //   } catch (e) {}
   // }
 
+  /// Toggle like for a post
   Future<void> toggleLikeInDatabase(String postId) async {
     try {
       final userId = _auth.currentUser!.id;
@@ -305,8 +309,9 @@ class DatabaseService {
     }
   }
 
-  /// EXTRA ///
-  Future<List<String>> getLikedPostIdsFromDatabase(String userId, List<String> postIds,) async {
+  /// EXTRA /// for when I use post_likes
+  Future<List<String>> getLikedPostIdsFromDatabase(String userId,
+      List<String> postIds,) async {
     final likedPostIds = <String>[];
     if (postIds.isEmpty) return likedPostIds;
 
@@ -333,9 +338,12 @@ class DatabaseService {
 
   //* ==================== COMMENTS ==================== */
 
+  /// OVERWRITE
   Future<Comment?> addComment(String postId, String message) async {
     final userId = _auth.currentUser?.id;
-    if (userId == null || message.trim().isEmpty) return null;
+    if (userId == null || message
+        .trim()
+        .isEmpty) return null;
 
     final user = await getUserFromDatabase(userId);
     if (user == null) return null;
@@ -348,7 +356,7 @@ class DatabaseService {
       name: user.name,
       username: user.username,
       message: message.trim(),
-      createdAt: DateTime.now(),
+      createdAt: DateTime.now().toUtc(),
     );
 
     try {
@@ -362,7 +370,6 @@ class DatabaseService {
         id: response['id'] ?? '',
         postId: response['post_id'] ?? '',
         userId: response['user_id'] ?? '',
-        // <-- using user_id
         name: response['name'] ?? '',
         username: response['username'] ?? '',
         message: response['message'] ?? '',
@@ -372,10 +379,38 @@ class DatabaseService {
       );
     } catch (e) {
       print("Error adding comment: $e");
-      return null;
     }
   }
 
+  /// Add comment to a post
+  Future<void> addCommentInDatabase(String postId, message) async {
+    try {
+      // get current user
+      String userId = _auth.currentUser!.id;
+      UserProfile? user = await getUserFromDatabase(userId);
+
+      // create a new comment
+      Comment newComment = Comment(
+          id: '',
+          postId: postId,
+          userId: userId,
+          name: user!.name,
+          username: user.username,
+          message: message,
+          createdAt: DateTime.now().toUtc());
+
+      // convert comment to a map
+      Map<String, dynamic> newCommentMap = newComment.toMap();
+
+      // store in Database
+      await _db.from('comments').insert(newCommentMap).select().single();
+    } catch (e) {
+      print("Error adding comment: $e");
+    }
+  }
+
+
+  /// Fetch comments for a post
   Future<List<Comment>> getComments(String postId) async {
     try {
       final response = await _db
@@ -386,7 +421,8 @@ class DatabaseService {
 
       return (response as List<dynamic>)
           .map(
-            (c) => Comment(
+            (c) =>
+            Comment(
               id: c['id'] ?? '',
               postId: c['post_id'] ?? '',
               userId: c['user_id'] ?? '',
@@ -398,7 +434,7 @@ class DatabaseService {
                   ? DateTime.parse(c['created_at'])
                   : DateTime.now(),
             ),
-          )
+      )
           .toList();
     } catch (e) {
       print("Error loading comments: $e");
@@ -406,6 +442,7 @@ class DatabaseService {
     }
   }
 
+  /// Delete comment for a post
   Future<void> deleteComment(String commentId) async {
     try {
       await _db.from('comments').delete().eq('id', commentId);
@@ -543,10 +580,8 @@ class DatabaseService {
     }
   }
 
-  Future<void> removeLikesBetweenUsers(
-    String currentUserId,
-    String blockedUserId,
-  ) async {
+  Future<void> removeLikesBetweenUsers(String currentUserId,
+      String blockedUserId,) async {
     // 1️⃣ Get all post IDs by blocked user
     final blockedUserPosts = await _db
         .from('posts')
