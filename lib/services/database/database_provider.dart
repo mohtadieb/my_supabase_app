@@ -69,7 +69,6 @@ class DatabaseProvider extends ChangeNotifier {
   List<Post> get followingPosts => _followingPosts;
 
 
-
   // Future<void> postMessage(String message) async {
   //   final currentUserId = _auth.getCurrentUserId();
   //   if (currentUserId.isEmpty || message.trim().isEmpty) return;
@@ -106,21 +105,17 @@ class DatabaseProvider extends ChangeNotifier {
   // DOUBLE CHECK
   Future<void> loadAllPosts() async {
     try {
-      // // ✅ 1. Fetch blocked users first
-      // await loadBlockedUsers();
-      // final blockedIds = _blockedUsers.map((u) => u.id).toSet();
-
-      // ✅ 2. Fetch all posts
+      //Fetch all posts from database
       final allPosts = await _db.getAllPostsFromDatabase();
 
-      // update local data
-      _allPosts = allPosts;
+      // get blocked userId's from database
+      final blockedUserIds = await _db.getBlockedUserIdsFromDatabase();
 
-      // ✅ 3. Initialize local like data
+      // filter out blocked users and update local data
+      _allPosts = allPosts.where((post) => !blockedUserIds.contains(post.userId)).toList();
+
+      // Initialize local like data
       initializeLikeMap();
-
-      // // ✅ 4. Filter out blocked users' posts
-      // _allPosts = _allPosts.where((post) => !blockedIds.contains(post.userId)).toList();
 
       // // ✅ 5. Load following posts (also filtered)
       // await loadFollowingPosts();
@@ -268,42 +263,160 @@ class DatabaseProvider extends ChangeNotifier {
 
 
 /* ==================== COMMENTS ==================== */
+
+  // Local list of comments
   final Map<String, List<Comment>> _comments = {};
+
+  // get comments locally
   List<Comment> getComments(String postId) => _comments[postId] ?? [];
 
+  // fetch comments from database
   Future<void> loadComments(String postId) async {
     try {
-      _comments[postId] = await _db.getComments(postId);
+      // get all comments for this post, update locally
+      _comments[postId] = await _db.getCommentsFromDatabase(postId);
+
+      // update UI
       notifyListeners();
     } catch (e) {
       debugPrint('Error loading comments: $e');
     }
   }
 
+  // add a comment
   Future<void> addComment(String postId, String message) async {
     if (message.trim().isEmpty) return;
 
     try {
-      final newComment = await _db.addComment(postId, message);
-      if (newComment != null) {
-        _comments[postId] = [...getComments(postId), newComment];
-        notifyListeners();
-      }
+      // add comment in Database
+      await _db.addCommentInDatabase(postId, message);
+
+      // reload comments
+      await loadComments(postId);
+
     } catch (e) {
       debugPrint('Error adding comment: $e');
     }
   }
 
+  // delete a comment
   Future<void> deleteComment(String commentId, String postId) async {
     try {
-      await _db.deleteComment(commentId);
-      _comments[postId] =
-          getComments(postId).where((c) => c.id != commentId).toList();
-      notifyListeners();
+      // delete comment in Database
+      await _db.deleteCommentFromDatabase(commentId);
+
+      // reload comments
+      await loadComments(postId);
+
     } catch (e) {
       debugPrint('Error deleting comment: $e');
     }
   }
+
+  /* ==================== BLOCKED USERS ==================== */
+
+  // local list of blocked users
+  List<UserProfile> _blockedUsers = [];
+
+  // get list of blocked users
+  List<UserProfile> get blockedUsers => _blockedUsers;
+
+  Future<void> loadBlockedUsers() async {
+    // get list of blocked userId's
+    final blockedIds = await _db.getBlockedUserIdsFromDatabase();
+
+    // get full user details using userId
+    final profiles = await Future.wait(
+        blockedIds.map((id) => _db.getUserFromDatabase(id)));
+
+    // return as a list
+    _blockedUsers = profiles.whereType<UserProfile>().toList();
+
+    // update UI
+    notifyListeners();
+  }
+
+  Future<void> blockUser(String userId) async {
+    final currentUserId = _auth.getCurrentUserId();
+    if (currentUserId.isEmpty) return;
+
+    try {
+      // ✅ 1. Block the user in the database
+      await _db.blockUserInDatabase(userId);
+
+      // // ✅ 2. Unfollow each other in the database
+      // await _db.unfollowUser(userId);
+      // await _db.removeFollower(userId);
+      //
+      // // ✅ 3. Remove likes between the two users in the database
+      // await _db.removeLikesBetweenUsers(currentUserId, userId);
+      //
+      // // ✅ 4. Update local state instantly (no hot restart needed)
+      // _allPosts.removeWhere((post) => post.userId == userId);
+      // _followingPosts.removeWhere((post) => post.userId == userId);
+      //
+      // // Remove from following/follower maps in memory
+      // _following[currentUserId]?.remove(userId);
+      // _followers[userId]?.remove(currentUserId);
+      //
+      // // Clean up local like maps
+      // _likedByMap.forEach((postId, likedBy) {
+      //   likedBy.remove(userId);
+      // });
+      // _likeCounts.removeWhere((postId, _) {
+      //   final likedBy = _likedByMap[postId];
+      //   return likedBy != null && likedBy.contains(userId);
+      // });
+      //
+      // // ✅ 5. Reload data from database for consistency
+      // await loadBlockedUsers();
+      // await loadUserFollowing(currentUserId);
+      // await loadUserFollowers(currentUserId);
+
+      // reload blocked users
+      await loadBlockedUsers();
+
+      // reload data
+      await loadAllPosts();
+
+      // update UI
+      notifyListeners();
+
+    } catch (e) {
+      debugPrint('Error blocking user: $e');
+    }
+  }
+
+  Future<void> unblockUser(String userId) async {
+
+    // perform unblock in database
+    await _db.unblockUserInDatabase(userId);
+
+    // _blockedUsers.removeWhere((user) => user.id == userId);
+
+    // reload blocked users
+    await loadBlockedUsers();
+
+    // reload data
+    await loadAllPosts();
+
+    // update UI
+    notifyListeners();
+  }
+
+  Future<void> reportUser(String postId, String userId) async {
+
+    // report user in Database
+    await _db.reportUserInDatabase(postId, userId);
+  }
+
+  // Future<void> deleteUser(String userId) async {
+  //   await _db.deleteUser(userId);
+  //   if (_currentUser?.id == userId) {
+  //     _currentUser = null;
+  //   }
+  //   notifyListeners();
+  // }
 
   /* ==================== FOLLOWERS / FOLLOWING ==================== */
   final Map<String, List<String>> _followers = {};
@@ -374,78 +487,6 @@ class DatabaseProvider extends ChangeNotifier {
     return _followers[userId]?.contains(currentUserId) ?? false;
   }
 
-  /* ==================== BLOCKED USERS ==================== */
-  List<UserProfile> _blockedUsers = [];
-  List<UserProfile> get blockedUsers => _blockedUsers;
-
-  Future<void> loadBlockedUsers() async {
-    final blockedIds = await _db.getBlockedUserIds();
-    final profiles = await Future.wait(blockedIds.map((id) => _db.getUserFromDatabase(id)));
-    _blockedUsers = profiles.whereType<UserProfile>().toList();
-    notifyListeners();
-  }
-
-  // Future<void> blockUser(String userId) async {
-  //   final currentUserId = _auth.getCurrentUserId();
-  //   if (currentUserId.isEmpty) return;
-  //
-  //   try {
-  //     // ✅ 1. Block the user in the database
-  //     await _db.blockUser(userId);
-  //
-  //     // ✅ 2. Unfollow each other in the database
-  //     await _db.unfollowUser(userId);
-  //     await _db.removeFollower(userId);
-  //
-  //     // ✅ 3. Remove likes between the two users in the database
-  //     await _db.removeLikesBetweenUsers(currentUserId, userId);
-  //
-  //     // ✅ 4. Update local state instantly (no hot restart needed)
-  //     _allPosts.removeWhere((post) => post.userId == userId);
-  //     _followingPosts.removeWhere((post) => post.userId == userId);
-  //
-  //     // Remove from following/follower maps in memory
-  //     _following[currentUserId]?.remove(userId);
-  //     _followers[userId]?.remove(currentUserId);
-  //
-  //     // Clean up local like maps
-  //     _likedByMap.forEach((postId, likedBy) {
-  //       likedBy.remove(userId);
-  //     });
-  //     _likeCounts.removeWhere((postId, _) {
-  //       final likedBy = _likedByMap[postId];
-  //       return likedBy != null && likedBy.contains(userId);
-  //     });
-  //
-  //     // ✅ 5. Reload data from database for consistency
-  //     await loadBlockedUsers();
-  //     await loadUserFollowing(currentUserId);
-  //     await loadUserFollowers(currentUserId);
-  //
-  //     notifyListeners(); // refresh UI immediately
-  //   } catch (e) {
-  //     debugPrint('Error blocking user: $e');
-  //   }
-  // }
-
-  Future<void> unblockUser(String userId) async {
-    await _db.unblockUser(userId);
-    _blockedUsers.removeWhere((user) => user.id == userId);
-    await loadAllPosts();
-    notifyListeners();
-  }
-
-  Future<void> reportUser(String postId, String userId) async {
-    await _db.reportUser(postId, userId);
-  }
-
-  // Future<void> deleteUser(String userId) async {
-  //   await _db.deleteUser(userId);
-  //   if (_currentUser?.id == userId) {
-  //     _currentUser = null;
-  //   }
-  //   notifyListeners();
-  // }
 
   /* ==================== SEARCH USERS ==================== */
   List<UserProfile> _searchResults = [];

@@ -93,6 +93,8 @@ class _SettingsPageState extends State<SettingsPage> {
       children: [
         Scaffold(
           backgroundColor: Theme.of(context).colorScheme.surface,
+
+          // Body
           body: SafeArea(
             child: Center(
               child: Padding(

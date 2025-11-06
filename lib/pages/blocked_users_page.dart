@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:my_supabase_app/services/database/database_provider.dart';
 
+
 class BlockedUsersPage extends StatefulWidget {
   const BlockedUsersPage({super.key});
 
@@ -17,37 +18,47 @@ class BlockedUsersPage extends StatefulWidget {
 }
 
 class _BlockedUsersPageState extends State<BlockedUsersPage> {
-  late DatabaseProvider _databaseProvider;
 
+  //providers
+  late final listeningProvider = Provider.of<DatabaseProvider>(context);
+  late final databaseProvider = Provider.of<DatabaseProvider>(context, listen: false);
+
+  // on startup,
   @override
   void initState() {
     super.initState();
-    // Delay provider access to after init
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _databaseProvider = Provider.of<DatabaseProvider>(context, listen: false);
-      _loadBlockedUsers();
-    });
+
+    // load blocked users
+    loadBlockedUsers();
   }
 
-  Future<void> _loadBlockedUsers() async {
-    await _databaseProvider.loadBlockedUsers();
+  Future<void> loadBlockedUsers() async {
+    await databaseProvider.loadBlockedUsers();
   }
 
-  void _showUnblockConfirmation(String userId) {
+  void _showUnblockConfirmationBox(String userId) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("Unblock User"),
         content: const Text("Are you sure you want to unblock this user?"),
         actions: [
+          // cancel Button
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text("Cancel"),
           ),
+
+          // Unblock button
           TextButton(
             onPressed: () async {
-              await _databaseProvider.unblockUser(userId);
+              // unblock user
+              await databaseProvider.unblockUser(userId);
+
+              // close box
               Navigator.pop(context);
+
+              // let user know user was successfully unblocked
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text("User unblocked!")),
               );
@@ -59,13 +70,16 @@ class _BlockedUsersPageState extends State<BlockedUsersPage> {
     );
   }
 
+  // BUILD UI
   @override
   Widget build(BuildContext context) {
     // Listen to changes in blocked users
-    final blockedUsers = Provider.of<DatabaseProvider>(context).blockedUsers;
-
+    final blockedUsers = listeningProvider.blockedUsers;
+    // SCAFFOLD
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
+
+      // App bar
       appBar: AppBar(
         title: const Text("Blocked Users"),
         foregroundColor: Theme.of(context).colorScheme.primary,
@@ -74,14 +88,14 @@ class _BlockedUsersPageState extends State<BlockedUsersPage> {
           ? const Center(
         child: Text(
           "No blocked users...",
-          style: TextStyle(fontSize: 16),
+          style: TextStyle(fontSize: 14),
         ),
       )
-          : ListView.separated(
-        padding: const EdgeInsets.all(12),
+          : ListView.builder(
+        padding: const EdgeInsets.all(14),
         itemCount: blockedUsers.length,
-        separatorBuilder: (_, __) => const Divider(),
         itemBuilder: (context, index) {
+          // get each user
           final user = blockedUsers[index];
           return ListTile(
             title: Text(user.name),
@@ -89,7 +103,7 @@ class _BlockedUsersPageState extends State<BlockedUsersPage> {
             trailing: IconButton(
               icon: const Icon(Icons.block),
               color: Colors.red,
-              onPressed: () => _showUnblockConfirmation(user.id),
+              onPressed: () => _showUnblockConfirmationBox(user.id),
             ),
           );
         },

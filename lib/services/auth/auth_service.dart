@@ -97,12 +97,13 @@ class AuthService {
 
       // 2️⃣ Delete all user data
       await _db.deleteUser(user.id);
+      // await user.delete();
 
       // 3️⃣ Delete Supabase auth user
       // Supabase does not provide direct deletion via client SDK
       // Workaround: Use admin API key on your backend to delete the user
       // For now, log out user
-      await logout();
+      // await logout();
     } on AuthException catch (e) {
       throw Exception(e.message);
     } catch (e) {

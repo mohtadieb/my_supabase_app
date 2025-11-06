@@ -6,7 +6,6 @@ This page displays:
 - individual's posts
 - comments on this post
 
-
 */
 
 import 'package:flutter/material.dart';
@@ -27,6 +26,9 @@ class PostPage extends StatefulWidget {
 }
 
 class _PostPageState extends State<PostPage> {
+
+  // providers
+  late final DatabaseProvider listeningProvider = Provider.of<DatabaseProvider>(context);
   late final DatabaseProvider databaseProvider = Provider.of<DatabaseProvider>(context, listen: false);
 
   final TextEditingController _commentController = TextEditingController();
@@ -46,6 +48,9 @@ class _PostPageState extends State<PostPage> {
   // BUILD UI
   @override
   Widget build(BuildContext context) {
+
+    // listen to all comments for this post
+    final allComments = listeningProvider.getComments(widget.post.id);
 
     // SCAFFOLD
     return Scaffold(
@@ -71,35 +76,31 @@ class _PostPageState extends State<PostPage> {
           ),
 
           // Comment list
-          Expanded(
-            child: Consumer<DatabaseProvider>(
-              builder: (context, listeningProvider, _) {
-                final allComments =
-                listeningProvider.getComments(widget.post.id);
-
-                return allComments.isEmpty
-                    ?
-                Center(
-                  child: Text(
-                    "No comments yet...",
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                )
-                    :
-                ListView.builder(
-                  itemCount: allComments.length,
-                  itemBuilder: (context, index) {
-                    final comment = allComments[index];
-                    return MyCommentTile(
-                      comment: comment,
-                      onUserTap: () => goUserPage(context, comment.userId),
-                    );
-                  },
-                );
-              },
+          allComments.isEmpty
+              ?
+          Center(
+            child: Text(
+              "No comments yet...",
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.primary,
+              ),
             ),
+          )
+              :
+          ListView.builder(
+            itemCount: allComments.length,
+            physics: const NeverScrollableScrollPhysics(),
+            shrinkWrap: true,
+            itemBuilder: (context, index) {
+              // get each comment
+              final comment = allComments[index];
+
+              // return as comment tile UI
+              return MyCommentTile(
+                comment: comment,
+                onUserTap: () => goUserPage(context, comment.userId),
+              );
+            },
           ),
 
           // DOUBLE CHECK

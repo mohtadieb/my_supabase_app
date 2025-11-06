@@ -1,5 +1,18 @@
 /*
+
 COMMENT TILE
+
+This is the comment tile widget which belongs below a post. It's similar to the
+post tile widget, but let's make comments look slightly different to posts.
+
+--------------------------------------------------------------------------------
+
+To use this widget, you need:
+
+- the comment
+- a function (for when the user taps and wants to go to the user profile of this
+comment)
+
 
 Displays a single comment with options to delete, report, or block depending on ownership.
 */
@@ -22,43 +35,63 @@ class MyCommentTile extends StatelessWidget {
 
   /// Show options for this comment: delete (own), report/block (others)
   void _showOptions(BuildContext context) {
+
+    // check if this comment is owned by the user or not
     final currentUserId = AuthService().getCurrentUserId();
     final isOwnComment = comment.userId == currentUserId;
 
+    // show options
     showModalBottomSheet(
       context: context,
       builder: (context) {
         return SafeArea(
           child: Wrap(
             children: [
+              // THIS COMMENT BELONGS TO USER
               if (isOwnComment) ...[
+
+                // delete comment button
                 ListTile(
                   leading: const Icon(Icons.delete),
                   title: const Text("Delete"),
                   onTap: () async {
+                    // pop option box
                     Navigator.pop(context);
+
+                    // handle delete action
                     await Provider.of<DatabaseProvider>(context, listen: false)
                         .deleteComment(comment.id, comment.postId);
                   },
                 ),
+                // THIS POST DOES NOT BELONG TO USER
               ] else ...[
+
+                // report comment button
                 ListTile(
                   leading: const Icon(Icons.report),
                   title: const Text("Report"),
                   onTap: () {
+                    // pop option box
                     Navigator.pop(context);
+
                     // TODO: implement report comment
                   },
                 ),
+
+                // block user button
                 ListTile(
                   leading: const Icon(Icons.block),
                   title: const Text("Block"),
                   onTap: () {
+                    // pop option box
+
                     Navigator.pop(context);
                     // TODO: implement block user
                   },
                 ),
               ],
+
+              // Always show cancel
               ListTile(
                 leading: const Icon(Icons.cancel),
                 title: const Text("Cancel"),
@@ -74,12 +107,20 @@ class MyCommentTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      // Padding outside
       margin: const EdgeInsets.symmetric(horizontal: 28, vertical: 7),
+
+      // Padding inside
       padding: const EdgeInsets.all(21),
+
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.tertiary,
+        // Color of post tile
+        color: Theme.of(context).colorScheme.secondary,
+
+        // Curve borders
         borderRadius: BorderRadius.circular(7),
       ),
+
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -88,11 +129,15 @@ class MyCommentTile extends StatelessWidget {
             onTap: onUserTap,
             child: Row(
               children: [
+                // Profile picture
                 Icon(
                   Icons.person,
                   color: Theme.of(context).colorScheme.primary,
                 ),
+
                 const SizedBox(width: 7),
+
+                // Name
                 Text(
                   comment.name,
                   style: TextStyle(
@@ -100,14 +145,20 @@ class MyCommentTile extends StatelessWidget {
                     color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
+
                 const SizedBox(width: 7),
+
+                // Username handle
                 Text(
                   '@${comment.username}',
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
+
                 const Spacer(),
+
+                // buttons -> more options: delete
                 GestureDetector(
                   onTap: () => _showOptions(context),
                   child: Icon(

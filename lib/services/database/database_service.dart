@@ -32,6 +32,8 @@ class DatabaseService {
 
   /// Save user in database
   Future<void> saveUserInDatabase({required String name, required String email,}) async {
+
+    try {
     // get current userId
     String userId = _auth.currentUser!.id;
 
@@ -60,7 +62,6 @@ class DatabaseService {
     print('Inserting user: $userMap');
 
     // save user in database
-    try {
       await _db.from('profiles').insert(userMap);
     } catch (e, st) {
       print("Error saving user info: $e\n$st");
@@ -102,8 +103,6 @@ class DatabaseService {
 
   /// Create a new post and return the inserted Post object
   Future<void> postMessageInDatabase(String message) async {
-    // if (userId == null || message.trim().isEmpty) return null;
-
     // try post message
     try {
       // get current userId
@@ -171,7 +170,7 @@ class DatabaseService {
   /// Get individual post
 
   /* ==================== LIKES ==================== */
-
+  // DOUBLE CHECK
   // Future<Post?> toggleLikeInDatabase(String postId) async {
   //   try {
   //     // get current userId
@@ -310,8 +309,7 @@ class DatabaseService {
   }
 
   /// EXTRA /// for when I use post_likes
-  Future<List<String>> getLikedPostIdsFromDatabase(String userId,
-      List<String> postIds,) async {
+  Future<List<String>> getLikedPostIdsFromDatabase(String userId, List<String> postIds,) async {
     final likedPostIds = <String>[];
     if (postIds.isEmpty) return likedPostIds;
 
@@ -337,50 +335,6 @@ class DatabaseService {
   }
 
   //* ==================== COMMENTS ==================== */
-
-  /// OVERWRITE
-  Future<Comment?> addComment(String postId, String message) async {
-    final userId = _auth.currentUser?.id;
-    if (userId == null || message
-        .trim()
-        .isEmpty) return null;
-
-    final user = await getUserFromDatabase(userId);
-    if (user == null) return null;
-
-    final comment = Comment(
-      id: '',
-      // Supabase auto-generates if empty
-      postId: postId,
-      userId: userId,
-      name: user.name,
-      username: user.username,
-      message: message.trim(),
-      createdAt: DateTime.now().toUtc(),
-    );
-
-    try {
-      final response = await _db
-          .from('comments')
-          .insert(comment.toMap())
-          .select()
-          .single(); // return the inserted row
-
-      return Comment(
-        id: response['id'] ?? '',
-        postId: response['post_id'] ?? '',
-        userId: response['user_id'] ?? '',
-        name: response['name'] ?? '',
-        username: response['username'] ?? '',
-        message: response['message'] ?? '',
-        createdAt: response['created_at'] != null
-            ? DateTime.parse(response['created_at'])
-            : DateTime.now(),
-      );
-    } catch (e) {
-      print("Error adding comment: $e");
-    }
-  }
 
   /// Add comment to a post
   Future<void> addCommentInDatabase(String postId, message) async {
@@ -409,9 +363,18 @@ class DatabaseService {
     }
   }
 
+  /// Delete comment for a post
+  Future<void> deleteCommentFromDatabase(String commentId) async {
+    try {
+      await _db.from('comments').delete().eq('id', commentId);
+    } catch (e) {
+      print("Error deleting comment: $e");
+    }
+  }
+
 
   /// Fetch comments for a post
-  Future<List<Comment>> getComments(String postId) async {
+  Future<List<Comment>> getCommentsFromDatabase(String postId) async {
     try {
       final response = await _db
           .from('comments')
@@ -419,22 +382,8 @@ class DatabaseService {
           .eq('post_id', postId)
           .order('created_at', ascending: true);
 
-      return (response as List<dynamic>)
-          .map(
-            (c) =>
-            Comment(
-              id: c['id'] ?? '',
-              postId: c['post_id'] ?? '',
-              userId: c['user_id'] ?? '',
-              // <-- using user_id
-              name: c['name'] ?? '',
-              username: c['username'] ?? '',
-              message: c['message'] ?? '',
-              createdAt: c['created_at'] != null
-                  ? DateTime.parse(c['created_at'])
-                  : DateTime.now(),
-            ),
-      )
+      return (response as List)
+          .map((row) => Comment.fromMap(row))
           .toList();
     } catch (e) {
       print("Error loading comments: $e");
@@ -442,13 +391,120 @@ class DatabaseService {
     }
   }
 
-  /// Delete comment for a post
-  Future<void> deleteComment(String commentId) async {
+
+  /* ==================== REPORT / BLOCK ==================== */
+
+  /// Report user in database
+  Future<void> reportUserInDatabase(String postId, String userId) async {
     try {
-      await _db.from('comments').delete().eq('id', commentId);
+      // Get current user ID from Supabase auth
+      final currentUserId = _db.auth.currentUser?.id;
+
+      // Prepare report data
+      final report = {
+        'reported_by': currentUserId,
+        'message_id': postId,
+        'message_owner_id': userId,
+        'created_at': DateTime.now().toUtc().toIso8601String(), // Use current timestamp
+      };
+
+      // Insert into "reports" table
+      await _db.from('reports').insert(report);
+
     } catch (e) {
-      print("Error deleting comment: $e");
+      print('Error reporting post: $e');
     }
+  }
+
+  Future<void> blockUserInDatabase(String userId) async {
+    try {
+      final currentUser = _db.auth.currentUser?.id;
+      if (currentUser == null) return;
+
+      final data = await _db.from('profiles').select('blocked_users').eq('id', currentUser).single();
+      final blocked = (data['blocked_users'] ?? [])..add(userId);
+
+      await _db.from('profiles').update({'blocked_users': blocked}).eq('id', currentUser);
+    } catch (e) {
+      print("Error blocking user: $e");
+    }
+  }
+
+  Future<void> unblockUserInDatabase(String userId) async {
+    try {
+      final currentUser = _db.auth.currentUser?.id;
+      if (currentUser == null) return;
+
+      // fetch and update blocked_users array in one go
+      final data = await _db.from('profiles').select('blocked_users').eq('id', currentUser).single();
+      final blocked = List<String>.from(data['blocked_users'] ?? [])..remove(userId);
+
+      await _db.from('profiles').update({'blocked_users': blocked}).eq('id', currentUser);
+    } catch (e) {
+      print("Error unblocking user: $e");
+    }
+  }
+
+  Future<List<String>> getBlockedUserIdsFromDatabase() async {
+    try {
+      final currentUser = _db.auth.currentUser?.id;
+      if (currentUser == null) return [];
+
+      final data = await _db
+          .from('profiles')
+          .select('blocked_users')
+          .eq('id', currentUser)
+          .single();
+
+      return List<String>.from(data['blocked_users'] ?? []);
+    } catch (e) {
+      print("Error getting blocked users: $e");
+      return [];
+    }
+  }
+
+  ///EXTRA
+  Future<void> removeLikesBetweenUsers(String currentUserId, String blockedUserId,) async {
+    // 1️⃣ Get all post IDs by blocked user
+    final blockedUserPosts = await _db
+        .from('posts')
+        .select('id')
+        .eq('user_id', blockedUserId);
+
+    final blockedPostIds = (blockedUserPosts as List)
+        .map((p) => p['id'] as String)
+        .toList();
+
+    // 2️⃣ Get all post IDs by current user
+    final currentUserPosts = await _db
+        .from('posts')
+        .select('id')
+        .eq('user_id', currentUserId);
+
+    final currentPostIds = (currentUserPosts as List)
+        .map((p) => p['id'] as String)
+        .toList();
+
+    // 3️⃣ Remove likes that current user gave to blocked user’s posts
+    if (blockedPostIds.isNotEmpty) {
+      await _db
+          .from('post_likes')
+          .delete()
+          .inFilter('post_id', blockedPostIds)
+          .eq('user_id', currentUserId);
+    }
+
+    // 4️⃣ Remove likes that blocked user gave to current user’s posts
+    if (currentPostIds.isNotEmpty) {
+      await _db
+          .from('post_likes')
+          .delete()
+          .inFilter('post_id', currentPostIds)
+          .eq('user_id', blockedUserId);
+    }
+
+    // 5️⃣ (Optional) Update like counts if needed
+    // You can call an RPC or recalculate in Dart if you maintain counts manually.
   }
 
   /* ==================== FOLLOW / UNFOLLOW ==================== */
@@ -517,112 +573,6 @@ class DatabaseService {
     });
   }
 
-  /* ==================== REPORT / BLOCK ==================== */
-  Future<void> reportUser(String postId, String userId) async {
-    final currentUser = _db.auth.currentUser?.id;
-    if (currentUser == null) return;
-
-    try {
-      await _db.from('reports').insert({
-        'reported_by': currentUser,
-        'message_id': postId,
-        'message_owner_id': userId,
-        'created_at': DateTime.now().toIso8601String(),
-      });
-    } catch (e) {
-      print("Error reporting user: $e");
-    }
-  }
-
-  Future<void> blockUser(String userId) async {
-    final currentUser = _db.auth.currentUser?.id;
-    if (currentUser == null) return;
-
-    try {
-      await _db.from('blocks').insert({
-        'blocker_id': currentUser,
-        'blocked_id': userId,
-      });
-    } catch (e) {
-      print("Error blocking user: $e");
-    }
-  }
-
-  Future<void> unblockUser(String userId) async {
-    final currentUser = _db.auth.currentUser?.id;
-    if (currentUser == null) return;
-
-    try {
-      await _db
-          .from('blocks')
-          .delete()
-          .eq('blocker_id', currentUser)
-          .eq('blocked_id', userId);
-    } catch (e) {
-      print("Error unblocking user: $e");
-    }
-  }
-
-  Future<List<String>> getBlockedUserIds() async {
-    final currentUser = _db.auth.currentUser?.id;
-    if (currentUser == null) return [];
-
-    try {
-      final List data = await _db
-          .from('blocks')
-          .select('blocked_id')
-          .eq('blocker_id', currentUser);
-
-      return data.map((e) => e['blocked_id'] as String).toList();
-    } catch (e) {
-      print("Error getting blocked users: $e");
-      return [];
-    }
-  }
-
-  Future<void> removeLikesBetweenUsers(String currentUserId,
-      String blockedUserId,) async {
-    // 1️⃣ Get all post IDs by blocked user
-    final blockedUserPosts = await _db
-        .from('posts')
-        .select('id')
-        .eq('user_id', blockedUserId);
-
-    final blockedPostIds = (blockedUserPosts as List)
-        .map((p) => p['id'] as String)
-        .toList();
-
-    // 2️⃣ Get all post IDs by current user
-    final currentUserPosts = await _db
-        .from('posts')
-        .select('id')
-        .eq('user_id', currentUserId);
-
-    final currentPostIds = (currentUserPosts as List)
-        .map((p) => p['id'] as String)
-        .toList();
-
-    // 3️⃣ Remove likes that current user gave to blocked user’s posts
-    if (blockedPostIds.isNotEmpty) {
-      await _db
-          .from('post_likes')
-          .delete()
-          .inFilter('post_id', blockedPostIds)
-          .eq('user_id', currentUserId);
-    }
-
-    // 4️⃣ Remove likes that blocked user gave to current user’s posts
-    if (currentPostIds.isNotEmpty) {
-      await _db
-          .from('post_likes')
-          .delete()
-          .inFilter('post_id', currentPostIds)
-          .eq('user_id', blockedUserId);
-    }
-
-    // 5️⃣ (Optional) Update like counts if needed
-    // You can call an RPC or recalculate in Dart if you maintain counts manually.
-  }
 
   /* ==================== DELETE USER ==================== */
   Future<void> deleteUser(String userId) async {
