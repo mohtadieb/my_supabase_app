@@ -23,7 +23,7 @@ import '../models/comment.dart';
 import '../services/auth/auth_service.dart';
 import '../services/database/database_provider.dart';
 
-class MyCommentTile extends StatelessWidget {
+class MyCommentTile extends StatefulWidget {
   final Comment comment;
   final void Function()? onUserTap;
 
@@ -33,12 +33,24 @@ class MyCommentTile extends StatelessWidget {
     required this.onUserTap,
   });
 
+  @override
+  State<MyCommentTile> createState() => _MyCommentTileState();
+}
+
+class _MyCommentTileState extends State<MyCommentTile> {
+  // providers
+  late final listeningProvider = Provider.of<DatabaseProvider>(context);
+  late final databaseProvider = Provider.of<DatabaseProvider>(
+    context,
+    listen: false,
+  );
+
   /// Show options for this comment: delete (own), report/block (others)
   void _showOptions(BuildContext context) {
 
     // check if this comment is owned by the user or not
     final currentUserId = AuthService().getCurrentUserId();
-    final isOwnComment = comment.userId == currentUserId;
+    final isOwnComment = widget.comment.userId == currentUserId;
 
     // show options
     showModalBottomSheet(
@@ -59,8 +71,7 @@ class MyCommentTile extends StatelessWidget {
                     Navigator.pop(context);
 
                     // handle delete action
-                    await Provider.of<DatabaseProvider>(context, listen: false)
-                        .deleteComment(comment.id, comment.postId);
+                    await databaseProvider.deleteComment(widget.comment.id, widget.comment.postId);
                   },
                 ),
                 // THIS POST DOES NOT BELONG TO USER
@@ -126,7 +137,7 @@ class MyCommentTile extends StatelessWidget {
         children: [
           // Top row: user info + options
           GestureDetector(
-            onTap: onUserTap,
+            onTap: widget.onUserTap,
             child: Row(
               children: [
                 // Profile picture
@@ -139,7 +150,7 @@ class MyCommentTile extends StatelessWidget {
 
                 // Name
                 Text(
-                  comment.name,
+                  widget.comment.name,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Theme.of(context).colorScheme.primary,
@@ -150,7 +161,7 @@ class MyCommentTile extends StatelessWidget {
 
                 // Username handle
                 Text(
-                  '@${comment.username}',
+                  '@${widget.comment.username}',
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.primary,
                   ),
@@ -172,7 +183,7 @@ class MyCommentTile extends StatelessWidget {
           const SizedBox(height: 21),
           // Comment message
           Text(
-            comment.message,
+            widget.comment.message,
             style: TextStyle(
               color: Theme.of(context).colorScheme.inversePrimary,
             ),

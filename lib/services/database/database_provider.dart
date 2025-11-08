@@ -449,7 +449,7 @@ class DatabaseProvider extends ChangeNotifier {
       _followingProfiles[userId] ?? [];
 
   Future<void> followUser(String targetUserId) async {
-    await _db.followUser(targetUserId);
+    await _db.followUserInDatabase(targetUserId);
     final currentUserId = _auth.getCurrentUserId();
     await loadUserFollowers(targetUserId);
     await loadUserFollowing(currentUserId);

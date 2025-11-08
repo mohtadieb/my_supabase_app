@@ -212,7 +212,8 @@ class _ProfilePageState extends State<ProfilePage> {
               children: [
                 Text("Bio", style: TextStyle(color: Theme.of(context).colorScheme.primary)),
 
-                // EDIT BIO ICON
+                // EDIT BIO BUTTON
+                // only show edit button when you're looking at your own profile
                 if (user!.id == currentUserId)
                   GestureDetector(
                     onTap: _showEditBioBox,

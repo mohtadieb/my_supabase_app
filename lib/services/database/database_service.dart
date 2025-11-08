@@ -35,7 +35,7 @@ class DatabaseService {
 
     try {
     // get current userId
-    String userId = _auth.currentUser!.id;
+    String currentUserId = _auth.currentUser!.id;
 
     // Generate a safe username
     String username = email
@@ -43,12 +43,12 @@ class DatabaseService {
         .first
         .trim();
     if (username.isEmpty) {
-      username = 'user_$userId';
+      username = 'user_$currentUserId';
     }
 
     // Create user profile
     UserProfile user = UserProfile(
-      id: userId,
+      id: currentUserId,
       name: name,
       email: email,
       username: username,
@@ -90,10 +90,10 @@ class DatabaseService {
   /// Update user bio
   Future<void> updateUserBioInDatabase(String bio) async {
     // Get current user Id
-    String userId = AuthService().getCurrentUserId();
+    final currentUserId = _auth.currentUser!.id;
 
     try {
-      await _db.from('profiles').update({'bio': bio}).eq('id', userId);
+      await _db.from('profiles').update({'bio': bio}).eq('id', currentUserId);
     } catch (e) {
       print("Error updating bio: $e");
     }
@@ -106,16 +106,16 @@ class DatabaseService {
     // try post message
     try {
       // get current userId
-      final userId = _auth.currentUser!.id;
+      final currentUserId = _auth.currentUser!.id;
 
       // Get user profile info
-      final user = await getUserFromDatabase(userId);
+      final user = await getUserFromDatabase(currentUserId);
       if (user == null) throw Exception("User profile not found");
 
       // Insert post and return the inserted row
       Post newPost = Post(
         id: '',
-        userId: userId,
+        userId: currentUserId,
         name: user.name,
         username: user.username,
         message: message,
@@ -173,7 +173,7 @@ class DatabaseService {
   /// Toggle like for a post
   Future<void> toggleLikeInDatabase(String postId) async {
     try {
-      final userId = _auth.currentUser!.id;
+      final currentUserId = _auth.currentUser!.id;
 
       // Step 1: Fetch the current post (like_count + liked_by)
       final postData = await _db
@@ -192,11 +192,11 @@ class DatabaseService {
       int likeCount = postData['like_count'] ?? 0;
 
       // Step 3: Determine whether to like or unlike
-      if (!likedBy.contains(userId)) {
-        likedBy.add(userId);
+      if (!likedBy.contains(currentUserId)) {
+        likedBy.add(currentUserId);
         likeCount++;
       } else {
-        likedBy.remove(userId);
+        likedBy.remove(currentUserId);
         likeCount--;
       }
 
@@ -242,14 +242,15 @@ class DatabaseService {
   Future<void> addCommentInDatabase(String postId, message) async {
     try {
       // get current user
-      String userId = _auth.currentUser!.id;
-      UserProfile? user = await getUserFromDatabase(userId);
+      final currentUserId = _auth.currentUser!.id;
+
+      UserProfile? user = await getUserFromDatabase(currentUserId);
 
       // create a new comment
       Comment newComment = Comment(
           id: '',
           postId: postId,
-          userId: userId,
+          userId: currentUserId,
           name: user!.name,
           username: user.username,
           message: message,
@@ -300,7 +301,7 @@ class DatabaseService {
   Future<void> reportUserInDatabase(String postId, String userId) async {
     try {
       // Get current user ID from Supabase auth
-      final currentUserId = _db.auth.currentUser?.id;
+        final currentUserId = _auth.currentUser!.id;
 
       // Prepare report data
       final report = {
@@ -321,8 +322,7 @@ class DatabaseService {
   /// Block user in database
   Future<void> blockUserInDatabase(String userId) async {
     try {
-      final currentUser = _db.auth.currentUser?.id;
-      if (currentUser == null) return;
+      final currentUser = _auth.currentUser!.id;
 
       final data = await _db.from('profiles').select('blocked_users').eq('id', currentUser).single();
       final blocked = (data['blocked_users'] ?? [])..add(userId);
@@ -336,7 +336,7 @@ class DatabaseService {
   /// Unblock user in database
   Future<void> unblockUserInDatabase(String userId) async {
     try {
-      final currentUser = _db.auth.currentUser?.id;
+      final currentUser = _auth.currentUser!.id;
       if (currentUser == null) return;
 
       // fetch and update blocked_users array in one go
@@ -352,8 +352,7 @@ class DatabaseService {
   /// Get blocked user from database
   Future<List<String>> getBlockedUserIdsFromDatabase() async {
     try {
-      final currentUser = _db.auth.currentUser?.id;
-      if (currentUser == null) return [];
+      final currentUser = _auth.currentUser!.id;
 
       final data = await _db
           .from('profiles')
@@ -413,9 +412,10 @@ class DatabaseService {
   }
 
   /* ==================== FOLLOW / UNFOLLOW ==================== */
-  Future<void> followUser(String targetUserId) async {
-    final currentUserId = _auth.currentUser?.id;
-    if (currentUserId == null) return;
+
+  /// Follow user in database
+  Future<void> followUserInDatabase(String targetUserId) async {
+    final currentUserId = _auth.currentUser!.id;
 
     try {
       await _db.from('follows').insert({
@@ -427,9 +427,9 @@ class DatabaseService {
     }
   }
 
+  /// Unfollow user in database
   Future<void> unfollowUser(String targetUserId) async {
-    final currentUserId = _auth.currentUser?.id;
-    if (currentUserId == null) return;
+    final currentUserId = _auth.currentUser!.id;
 
     try {
       await _db
@@ -469,8 +469,7 @@ class DatabaseService {
   }
 
   Future<void> removeFollower(String userId) async {
-    final currentUserId = _auth.currentUser?.id;
-    if (currentUserId == null) return;
+    final currentUserId = _auth.currentUser!.id;
 
     await _db.from('followers').delete().match({
       'follower_id': userId,
@@ -480,17 +479,7 @@ class DatabaseService {
 
 
   /* ==================== DELETE USER ==================== */
-  Future<void> deleteUserInfoFromDatabase1(String userId) async {
-    try {
-      await _db.from('posts').delete().eq('user_id', userId);
-      await _db.from('comments').delete().eq('user_id', userId);
-      await _db.from('profiles').delete().eq('id', userId);
-    } catch (e) {
-      debugPrint('Error deleting user: $e');
-    }
-  }
-
-  /// Invokes supabase function to delete user data from Supabase
+  /// Invokes supabase function to delete user data as a batch
   Future<void> deleteUserData(String userId) async {
     try {
       final result = await _db.rpc(
