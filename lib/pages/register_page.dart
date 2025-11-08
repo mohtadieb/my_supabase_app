@@ -34,6 +34,7 @@ class RegisterPage extends StatefulWidget {
 }
 
 class _RegisterPageState extends State<RegisterPage> {
+  // services
   final AuthService _auth = AuthService();
   final DatabaseService _db = DatabaseService();
 
@@ -43,7 +44,9 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController pwController = TextEditingController();
   final TextEditingController confirmPwController = TextEditingController();
 
-  /// Register user
+  /// Handles register with auth service
+  bool _isRegistering = false;
+
   Future<void> register() async {
 
     // Password check
@@ -51,8 +54,9 @@ class _RegisterPageState extends State<RegisterPage> {
       showErrorDialog("Passwords don't match");
       return;
     }
+
     // loading
-    showLoadingCircle(context, message: "Registering...");
+    setState(() => _isRegistering = true); // triggers a loading overlay in the UI
 
     try {
       await _auth.registerEmailPassword(
@@ -65,20 +69,17 @@ class _RegisterPageState extends State<RegisterPage> {
         name: nameController.text.trim(),
         email: emailController.text.trim(),
       );
-      print('mounted: $mounted');
-      // Show success feedback
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Account created successfully!')),
-        );
-        hideLoadingCircle(context);
-      }
+
+      if(!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Account created successfully!')),
+      );
+
     } catch (e) {
-      if (mounted) {
-        //hideLoadingCircle(context);
-        // Show error dialog if register fails
-        showErrorDialog(e.toString());
-      }
+      if (mounted) showErrorDialog(e.toString());
+    } finally {
+      if (mounted) setState(() => _isRegistering = false);
     }
   }
 

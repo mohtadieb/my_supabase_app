@@ -35,26 +35,6 @@ class DatabaseProvider extends ChangeNotifier {
   /// Get user profile given userId
   Future<UserProfile?> getUserProfile(String userId) => _db.getUserFromDatabase(userId);
 
-  // DOUBLE CHECK
-  // Future<void> updateBio(String bio) async {
-  //   final currentUserId = _auth.getCurrentUserId();
-  //   if (currentUserId.isEmpty) return;
-  //
-  //   try {
-  //     // ✅ Delegate database update to DatabaseService
-  //     await _db.updateUserBioInDatabase(bio);
-  //
-  //     // ✅ Update local cached user profile
-  //     if (_currentUser != null) {
-  //       _currentUser = _currentUser!.copyWith(bio: bio);
-  //     }
-  //
-  //     notifyListeners();
-  //   } catch (e) {
-  //     debugPrint('Error updating bio: $e');
-  //   }
-  // }
-
   /// Update user bio
   Future<void> updateBio(String bio) => _db.updateUserBioInDatabase(bio);
 

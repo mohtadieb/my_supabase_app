@@ -8,13 +8,16 @@ Handles all authentication logic with Supabase:
 - Delete account (requires password confirmation)
 */
 
-import 'package:my_supabase_app/services/database/database_provider.dart';
+import 'dart:math';
+
+import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../database/database_service.dart';
 
+
 class AuthService {
   final _auth = Supabase.instance.client.auth;
-  final DatabaseService _db = DatabaseService(); // ✅ Use service, not provider
+  final DatabaseService _db = DatabaseService();
 
   /* ==================== CURRENT USER ==================== */
   User? getCurrentUser() => _auth.currentUser;
@@ -78,6 +81,8 @@ class AuthService {
   }
 
   /* ==================== DELETE ACCOUNT WITH PASSWORD ==================== */
+
+  /// Delete user from firebase
   Future<void> deleteAccountWithPassword(String password) async {
     final user = getCurrentUser();
     if (user == null || user.email == null) {
@@ -96,14 +101,11 @@ class AuthService {
       }
 
       // 2️⃣ Delete all user data
-      await _db.deleteUser(user.id);
-      // await user.delete();
+      await _db.deleteUserData(user.id);
 
-      // 3️⃣ Delete Supabase auth user
-      // Supabase does not provide direct deletion via client SDK
-      // Workaround: Use admin API key on your backend to delete the user
-      // For now, log out user
-      // await logout();
+      // delete user's auth record
+      await deleteMyAccountAuth();
+
     } on AuthException catch (e) {
       throw Exception(e.message);
     } catch (e) {
@@ -111,4 +113,46 @@ class AuthService {
       rethrow;
     }
   }
+
+  /// Delete user auth
+  Future<void> deleteMyAccountAuth() async {
+    final supabase = Supabase.instance.client;
+    final session = supabase.auth.currentSession;
+
+    if (session == null) {
+      print("❌ No user logged in");
+      return;
+    }
+
+    // Use your Edge Function URL
+    final url = Uri.parse(
+      'https://njotewktazwhoprvhsvj.supabase.co/functions/v1/delete-user',
+    );
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${session.accessToken}', // must include this
+        },
+        // No body needed because the function uses the token to get the user
+      );
+
+      if (response.statusCode == 200) {
+        print('✅ Account deleted successfully!');
+
+        // Sign out the user locally after deletion
+        await logout();
+        print('User signed out locally.');
+      } else {
+        print('❌ Failed to delete account: ${response.body}');
+      }
+    } catch (e) {
+      print('❌ Error calling delete-user function: $e');
+    }
+  }
+
+
+
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/database/database_provider.dart';
 import '../../services/auth/auth_service.dart';
+import '../components/my_loading_circle.dart';
 
 /*
 
@@ -53,7 +54,10 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
               const Text(
                 "To confirm deletion, please re-enter your password. This action is irreversible.",
               ),
-              const SizedBox(height: 16),
+
+              const SizedBox(height: 14),
+
+              // Password input
               TextField(
                 controller: _passwordController,
                 obscureText: true,
@@ -63,17 +67,20 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
                 ),
                 enabled: !_isDeleting,
               ),
+
               if (_errorMessage.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
+                  padding: const EdgeInsets.only(top: 7.0),
                   child: Text(
                     _errorMessage,
-                    style: const TextStyle(color: Colors.red, fontSize: 12),
+                    style: const TextStyle(color: Colors.red, fontSize: 14),
                   ),
                 ),
+
+              // DELETING
               if (_isDeleting)
                 Padding(
-                  padding: const EdgeInsets.only(top: 16.0),
+                  padding: const EdgeInsets.only(top: 14.0),
                   child: Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -96,44 +103,38 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
               onPressed: _isDeleting
                   ? null
                   : () async {
-                      final password = _passwordController.text.trim();
+                final password = _passwordController.text.trim();
 
-                      if (password.isEmpty) {
-                        setState(() {
-                          _errorMessage = "Please enter your password.";
-                        });
-                        return;
-                      }
+                if (password.isEmpty) {
+                  setState(() {
+                    _errorMessage = "Please enter your password.";
+                  });
+                  return;
+                }
 
-                      setState(() => _isDeleting = true);
+                setState(() => _isDeleting = true);
 
-                      try {
-                        // Supabase: Re-authenticate and delete
-                        await _auth.deleteAccountWithPassword(password);
+                try {
+                  // Supabase: Re-authenticate and delete
+                  await _auth.deleteAccountWithPassword(password);
+                  if (mounted) {
+                    Navigator.pop(context); // Close dialog
 
-                        // Delete user data via DatabaseProvider
-                        final db = Provider.of<DatabaseProvider>(
-                          context,
-                          listen: false,
-                        );
-                        //await db.deleteUser(_auth.getCurrentUserId());
-
-                        if (mounted) {
-                          Navigator.pop(context); // Close dialog
-                          Navigator.pushNamedAndRemoveUntil(
-                            context,
-                            '/',
-                            (route) => false,
-                          );
-                        }
-                      } catch (e) {
-                        setState(() {
-                          _isDeleting = false;
-                          _errorMessage =
-                              "Deletion failed. Check password or try again.";
-                        });
-                      }
-                    },
+                    // navigate to initial route (Authg gate -> login/register page)
+                    Navigator.pushNamedAndRemoveUntil(
+                      context,
+                      '/',
+                          (route) => false,
+                    );
+                  }
+                } catch (e) {
+                  setState(() {
+                    _isDeleting = false;
+                    _errorMessage =
+                    "Deletion failed. Check password or try again.";
+                  });
+                }
+              },
               child: const Text("Delete"),
             ),
           ],
@@ -144,14 +145,18 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    //SCAFFOLD
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
+      // App bar
       appBar: AppBar(
         title: const Text("Account Settings"),
         foregroundColor: Theme.of(context).colorScheme.primary,
       ),
       body: Column(
         children: [
+
+          // Delete account button
           GestureDetector(
             onTap: () => confirmDeletion(context),
             child: Container(
@@ -161,6 +166,8 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
                 color: Colors.red,
                 borderRadius: BorderRadius.circular(7),
               ),
+
+              // Delete account text
               child: const Center(
                 child: Text(
                   "Delete account",

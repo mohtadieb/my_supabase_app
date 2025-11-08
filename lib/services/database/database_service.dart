@@ -169,104 +169,6 @@ class DatabaseService {
 
   /// Get individual post
 
-  /* ==================== LIKES ==================== */
-  // DOUBLE CHECK
-  // Future<Post?> toggleLikeInDatabase(String postId) async {
-  //   try {
-  //     // get current userId
-  //     String userId = _auth.currentUser!.id;
-  //
-  //     // Go to data for this post
-  //     final postData = await _db
-  //         .from('posts')
-  //         .select('id, like_count, liked_by')
-  //         .eq('id', postId)
-  //         .maybeSingle();
-  //
-  //     if (postData == null) return null;
-  //
-  //     // list of users who liked this post
-  //     List<String> likedBy = List<String>.from(postData['liked_by'] ?? []);
-  //
-  //     // get like count
-  //     int likeCount = postData['like_count'] ?? 0;
-  //
-  //     // execute like
-  //     if (likedBy.contains(userId)) {
-  //       // Unlike
-  //       likedBy.remove(userId);
-  //       likeCount = likeCount > 0 ? likeCount - 1 : 0;
-  //     } else {
-  //       // Like
-  //       likedBy.add(userId);
-  //       likeCount += 1;
-  //     }
-  //
-  //     // Update the post in DB
-  //     final updatedPost = await _db
-  //         .from('posts')
-  //         .update({
-  //       'liked_by': likedBy,
-  //       'like_count': likeCount,
-  //     })
-  //         .eq('id', postId)
-  //         .select()
-  //         .maybeSingle();
-  //
-  //     if (updatedPost == null) return null;
-  //
-  //     return Post.fromMap(updatedPost);
-  //   } catch (e) {
-  //     print('Error toggling like: $e');
-  //     return null;
-  //   }
-  // }
-
-  // FIREBASE VERSION
-  // Future<void> toggleLikeInDatabase(String postId) async {
-  //   try {
-  //     // get current userId
-  //     String userId = _auth.currentUser!.id;
-  //
-  //     // go to doc for this post
-  //     DocumentReference postDoc = _db.collection('posts').doc(postId);
-  //
-  //     // execute like
-  //     await _db.runTransaction((transaction) async {
-  //       // get post data
-  //       DocumentSnapshot postSnapshot = await transaction.get(postDoc);
-  //
-  //       // get like of users who like this post
-  //       List<String> likedBy = List<String>.from(snapshot['liked_by'] ?? []);
-  //
-  //       // get like count
-  //       int currentLikeCount = postSnapshot['like_count'];
-  //
-  //       // if user has not liked this post yet -> then like
-  //       if (!likedBy.contains(userId)) {
-  //         // add user to like list
-  //         likedBy.add(userId);
-  //
-  //         // increment the like count
-  //         currentLikeCount++;
-  //
-  //         // if user has already liked this post -> then unlike
-  //       } else {
-  //         // remove user from like list
-  //         likedBy.remove(userId);
-  //
-  //         // decrement like count
-  //         currentLikeCount--;
-  //       }
-  //
-  //       // update in database
-  //       transaction.update(postDoc, {
-  //         'like_count': currentLikeCount,
-  //         'liked_by': likedBy,
-  //       });
-  //     });
-  //   } catch (e) {}
-  // }
 
   /// Toggle like for a post
   Future<void> toggleLikeInDatabase(String postId) async {
@@ -416,6 +318,7 @@ class DatabaseService {
     }
   }
 
+  /// Block user in database
   Future<void> blockUserInDatabase(String userId) async {
     try {
       final currentUser = _db.auth.currentUser?.id;
@@ -430,6 +333,7 @@ class DatabaseService {
     }
   }
 
+  /// Unblock user in database
   Future<void> unblockUserInDatabase(String userId) async {
     try {
       final currentUser = _db.auth.currentUser?.id;
@@ -445,6 +349,7 @@ class DatabaseService {
     }
   }
 
+  /// Get blocked user from database
   Future<List<String>> getBlockedUserIdsFromDatabase() async {
     try {
       final currentUser = _db.auth.currentUser?.id;
@@ -575,22 +480,27 @@ class DatabaseService {
 
 
   /* ==================== DELETE USER ==================== */
-  Future<void> deleteUser(String userId) async {
+  Future<void> deleteUserInfoFromDatabase1(String userId) async {
     try {
-      await _db.from('posts').delete().eq('userId', userId);
-      await _db.from('comments').delete().eq('userId', userId);
-      await _db.from('post_likes').delete().eq('userId', userId);
-      await _db
-          .from('follows')
-          .delete()
-          .or('follower_id.eq.$userId,followed_id.eq.$userId');
-      await _db
-          .from('blocks')
-          .delete()
-          .or('blocker_id.eq.$userId,blocked_id.eq.$userId');
+      await _db.from('posts').delete().eq('user_id', userId);
+      await _db.from('comments').delete().eq('user_id', userId);
       await _db.from('profiles').delete().eq('id', userId);
     } catch (e) {
       debugPrint('Error deleting user: $e');
+    }
+  }
+
+  /// Invokes supabase function to delete user data from Supabase
+  Future<void> deleteUserData(String userId) async {
+    try {
+      final result = await _db.rpc(
+        'delete_user_data',
+        params: {'target_user_id': userId},
+      );
+
+      print('✅ User data deleted successfully! Result: $result');
+    } catch (e) {
+      print('❌ Error calling delete_user_data function: $e');
     }
   }
 
