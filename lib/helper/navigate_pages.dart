@@ -1,5 +1,6 @@
 // Navigation helper functions
 import 'package:flutter/material.dart';
+import 'package:my_supabase_app/layouts/main_layout.dart';
 import '../pages/home_page.dart';
 import '../pages/account_settings_page.dart';
 import '../pages/blocked_users_page.dart';
@@ -44,6 +45,15 @@ void goHomePage(BuildContext context) {
   Navigator.pushAndRemoveUntil(
     context,
     MaterialPageRoute(builder: (_) => const HomePage()),
+        (route) => false,
+  );
+
+}
+
+void goMainLayout(BuildContext context) {
+  Navigator.pushAndRemoveUntil(
+    context,
+    MaterialPageRoute(builder: (_) => const MainLayout()),
         (route) => false,
   );
 

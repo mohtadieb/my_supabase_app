@@ -153,6 +153,10 @@ class _ProfilePageState extends State<ProfilePage> {
         title: Text(_isLoading ? '' : user!.name),
         foregroundColor: Theme.of(context).colorScheme.primary,
         centerTitle: true,
+        leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => goMainLayout(context),
+            ),
       ),
 
       // Body

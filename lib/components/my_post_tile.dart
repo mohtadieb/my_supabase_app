@@ -19,8 +19,7 @@ To use this widget, you need:
 - a function for onPostTap (to go the individual post to see it's comments)
 - a function for onUserTap (to go to user's profile page)
 
-
- */
+*/
 
 class MyPostTile extends StatefulWidget {
   final Post post;
@@ -135,7 +134,6 @@ class _MyPostTileState extends State<MyPostTile> {
   - Block
   - Cancel
 
-
    */
 
   // Show options for post
@@ -150,52 +148,52 @@ class _MyPostTileState extends State<MyPostTile> {
         child: Wrap(
           children: [
             isOwnPost
-                // THIS POST BELONGS TO USER
+            // THIS POST BELONGS TO USER
                 ?
-                  // Delete button
-                  ListTile(
-                    leading: const Icon(Icons.delete),
-                    title: const Text("Delete"),
-                    onTap: () async {
-                      // pop option box
-                      Navigator.pop(context);
+            // Delete button
+            ListTile(
+              leading: const Icon(Icons.delete),
+              title: const Text("Delete"),
+              onTap: () async {
+                // pop option box
+                Navigator.pop(context);
 
-                      // handle delete action
-                      await databaseProvider.deletePost(widget.post.id);
-                    },
-                  )
-                // THIS POST DOES NOT BELONG TO USER
+                // handle delete action
+                await databaseProvider.deletePost(widget.post.id);
+              },
+            )
+            // THIS POST DOES NOT BELONG TO USER
                 :
-                  // Report button
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ListTile(
-                        leading: const Icon(Icons.report),
-                        title: const Text("Report"),
-                        onTap: () {
-                          // pop option box
-                          Navigator.pop(context);
+            // Report button
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.report),
+                  title: const Text("Report"),
+                  onTap: () {
+                    // pop option box
+                    Navigator.pop(context);
 
-                          // handle report action
-                          _reportPostConfirmationBox();
-                        },
-                      ),
+                    // handle report action
+                    _reportPostConfirmationBox();
+                  },
+                ),
 
-                      // block user button
-                      ListTile(
-                        leading: const Icon(Icons.block),
-                        title: const Text("Block"),
-                        onTap: () {
-                          // pop option box
-                          Navigator.pop(context);
+                // block user button
+                ListTile(
+                  leading: const Icon(Icons.block),
+                  title: const Text("Block"),
+                  onTap: () {
+                    // pop option box
+                    Navigator.pop(context);
 
-                          // handle block action
-                          _blockUserConfirmationBox();
-                        },
-                      ),
-                    ],
-                  ),
+                    // handle block action
+                    _blockUserConfirmationBox();
+                  },
+                ),
+              ],
+            ),
 
             // Always show cancel
             ListTile(
@@ -217,7 +215,6 @@ class _MyPostTileState extends State<MyPostTile> {
         title: const Text("Report Message"),
         content: const Text("Are you sure you want to report this message?"),
         actions: [
-
           // cancel button
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -228,7 +225,10 @@ class _MyPostTileState extends State<MyPostTile> {
           TextButton(
             onPressed: () async {
               // report user
-              await databaseProvider.reportUser(widget.post.id, widget.post.userId,);
+              await databaseProvider.reportUser(
+                widget.post.id,
+                widget.post.userId,
+              );
 
               // close the box
               Navigator.pop(context);
@@ -309,170 +309,183 @@ class _MyPostTileState extends State<MyPostTile> {
     return GestureDetector(
       // tapping anywhere on the post container triggers onPostTap
       onTap: widget.onPostTap,
-      child: Container(
-        width: double.infinity,
-        margin: const EdgeInsets.symmetric(vertical: 7),
-        decoration: BoxDecoration(
-          // Color of post tile top
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(7),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Row: Profile picture + Name/Username + Options
-                  Row(
-                    children: [
-                      // Wrap profile picture + name/username together for onUserTap
-                      GestureDetector(
-                        onTap: widget.onUserTap,
-                        child: Row(
-                          children: [
-                            // Profile picture
-                            Icon(
-                              Icons.person,
-                              color: Theme.of(context).colorScheme.primary,
-                              size: 40,
-                            ),
-
-                            const SizedBox(width: 7),
-
-                            // Name & Username
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Name
-                                Text(
-                                  widget.post.name,
-                                  style: TextStyle(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.primary,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-
-                                SizedBox(width: 7,),
-
-                                // Username
-                                Text(
-                                  '@${widget.post.username}',
-                                  style: TextStyle(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.primary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const Spacer(),
-
-                      // Options button
-                      GestureDetector(
-                        onTap: _showOptions,
-                        child: Icon(
-                          Icons.more_horiz,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 14),
-
-                  // Post message
-                  Text(
-                    widget.post.message,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.inversePrimary,
-                    ),
-                  ),
-                ],
+      child: Center(
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 7, horizontal: 14),
+          padding: const EdgeInsets.all(7),
+          decoration: BoxDecoration(
+            // Color of post tile top
+            color: Theme.of(context).colorScheme.secondary,
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: Color.fromRGBO(0, 0, 0, 0.05),
+                blurRadius: 7,
+                offset: const Offset(0, 2),
               ),
-            ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Row: Profile picture + Name/Username + Options
+                    Row(
+                      children: [
+                        // Wrap profile picture + name/username together for onUserTap
+                        GestureDetector(
+                          onTap: widget.onUserTap,
+                          child: Row(
+                            children: [
+                              // Profile picture
+                              Icon(
+                                Icons.person,
+                                color: Theme.of(context).colorScheme.primary,
+                                size: 40,
+                              ),
 
-            // Like / Comment / Timestamp Row
-            Container(
-              width: double.infinity,
-              // Color of post tile bottom
-              color: Theme.of(context).colorScheme.surface,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                              const SizedBox(width: 7),
 
-              // Buttons -> Like / Comment + Timestamp
-              child: Row(
-                children: [
-                  // Like Button
-                  GestureDetector(
-                    onTap: _toggleLikePost,
-                    child: likedByCurrentUser
-                        ? const Icon(Icons.favorite, color: Colors.red)
-                        : Icon(
-                            Icons.favorite_border,
+                              // Name & Username
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Name
+                                  Text(
+                                    widget.post.name,
+                                    style: TextStyle(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primary,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+
+                                  const SizedBox(width: 7),
+
+                                  // Username
+                                  Text(
+                                    '@${widget.post.username}',
+                                    style: TextStyle(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const Spacer(),
+
+                        // Options button
+                        GestureDetector(
+                          onTap: _showOptions,
+                          child: Icon(
+                            Icons.more_horiz,
                             color: Theme.of(context).colorScheme.primary,
                           ),
-                  ),
+                        ),
+                      ],
+                    ),
 
-                  const SizedBox(width: 1),
+                    const SizedBox(height: 14),
 
-                  // Like count
-                  SizedBox(
-                    width: 21,
-                    child: Text(
-                      likeCount != 0 ? likeCount.toString() : '',
+                    // Post message
+                    Text(
+                      widget.post.message,
                       style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary,
+                        color:
+                        Theme.of(context).colorScheme.inversePrimary,
+                        fontSize: 15,
                       ),
-                      textAlign: TextAlign.center,
                     ),
-                  ),
-
-                  const SizedBox(width: 14),
-
-                  // Comment Button
-                  GestureDetector(
-                    onTap: _openNewCommentBox,
-                    child: Icon(
-                      Icons.comment,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-
-                  const SizedBox(width: 1),
-
-                  // Comment count
-                  SizedBox(
-                    width: 21,
-                    child: Text(
-                      commentCount != 0 ? commentCount.toString() : '',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-
-                  const Spacer(),
-
-                  // Timestamp
-                  Text(
-                    timeAgo(widget.post.createdAt),
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+
+              // Like / Comment / Timestamp Row
+              Container(
+                color: Theme.of(context).colorScheme.secondary,
+                padding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+
+                // Buttons -> Like / Comment + Timestamp
+                child: Row(
+                  children: [
+                    // Like Button
+                    GestureDetector(
+                      onTap: _toggleLikePost,
+                      child: likedByCurrentUser
+                          ? const Icon(Icons.favorite, color: Colors.red)
+                          : Icon(
+                        Icons.favorite_border,
+                        color:
+                        Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+
+                    const SizedBox(width: 1),
+
+                    // Like count
+                    SizedBox(
+                      width: 21,
+                      child: Text(
+                        likeCount != 0 ? likeCount.toString() : '',
+                        style: TextStyle(
+                          color:
+                          Theme.of(context).colorScheme.primary,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+
+                    const SizedBox(width: 14),
+
+                    // Comment Button
+                    GestureDetector(
+                      onTap: _openNewCommentBox,
+                      child: Icon(
+                        Icons.comment,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+
+                    const SizedBox(width: 1),
+
+                    // Comment count
+                    SizedBox(
+                      width: 21,
+                      child: Text(
+                        commentCount != 0 ? commentCount.toString() : '',
+                        style: TextStyle(
+                          color:
+                          Theme.of(context).colorScheme.primary,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+
+                    const Spacer(),
+
+                    // Timestamp
+                    Text(
+                      timeAgo(widget.post.createdAt),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

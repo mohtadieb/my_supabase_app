@@ -18,6 +18,7 @@ the it's much easier to manage and switch out different databases.
 */
 
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/comment.dart';
 import '../../models/post.dart';
 import '../../models/user.dart';
@@ -74,7 +75,7 @@ class DatabaseProvider extends ChangeNotifier {
       initializeLikeMap();
 
       // // ✅ 5. Load following posts (also filtered)
-      // await loadFollowingPosts();
+      await loadFollowingPosts();
 
       // Update UI
       notifyListeners();
@@ -96,16 +97,21 @@ class DatabaseProvider extends ChangeNotifier {
     return allPosts.where((post) => post.likedBy.contains(currentUserId)).toList();
   }
 
+  /// load following posts
   Future<void> loadFollowingPosts() async {
+    // get current userId
     final currentUserId = _auth.getCurrentUserId();
     if (currentUserId.isEmpty) return;
 
     try {
-      final followingIds = await _db.getFollowingFromDatabase(currentUserId);
+      // get list of UserId's that the current logged in user follows
+      final followingUserIds = await _db.getFollowingFromDatabase(currentUserId);
 
+      // filter all the posts to be the ones for the following tab
       _followingPosts =
-          _allPosts.where((p) => followingIds.contains(p.userId)).toList();
+          _allPosts.where((post) => followingUserIds.contains(post.userId)).toList();
 
+      // update UI
       notifyListeners();
     } catch (e) {
       debugPrint('Error loading following posts: $e');
@@ -414,49 +420,68 @@ class DatabaseProvider extends ChangeNotifier {
   }
 
   // get list of follower profiles for a given user
-  List<UserProfile> getListOfFollowersProfile(String userId) =>
+  List<UserProfile> getListOfFollowerProfiles(String userId) =>
       _followerProfiles[userId] ?? [];
   // get a list of following profiles for a given user
-  List<UserProfile> getListOfFollowingProfile(String userId) =>
+  List<UserProfile> getListOfFollowingProfiles(String userId) =>
       _followingProfiles[userId] ?? [];
 
   // load follower profiles for a given userId
   Future<void> loadUserFollowerProfiles(String userId) async {
     try {
-      final followerIds = _followers[userId] ?? [];
-      final profiles = await Future.wait(followerIds.map((id) async {
-        final data = await _db.getUserFromDatabase(id);
-        return data!;
-      }));
-      _followerProfiles[userId] = profiles;
+      final followerIds = await _db.getFollowersFromDatabase(userId);
+
+      // create a list of user profiles
+      List<UserProfile> followerProfiles = [];
+
+      // go through each follower id
+      for (String followerId in followerIds) {
+        // get user profile from database with this userId
+        UserProfile? followerProfile = await _db.getUserFromDatabase(followerId);
+
+        // add to follower profile
+        if (followerProfile != null) {
+          followerProfiles.add(followerProfile);
+        }
+      }
+
+      // update local data
+      _followerProfiles[userId] = followerProfiles;
+
+      // update UI
       notifyListeners();
     }
     // if there are any errors
     catch (e) {
       print(e);
     }
-
-
   }
 
   // load following profiles for a given userId
   Future<void> loadUserFollowingProfiles(String userId) async {
-    try{
-      final followingIds = _following[userId] ?? [];
+    try {
+      final followingIds = await _db.getFollowingFromDatabase(userId);
 
-      final profiles = await Future.wait(followingIds.map((id) async {
-        final data = await _db.getUserFromDatabase(id);
-        return data!;
-      }));
-      _followingProfiles[userId] = profiles;
+      // create a list of user profiles
+      List<UserProfile> followingProfiles = [];
 
-      // Update UI
+      // go through each following id
+      for (String followingId in followingIds) {
+        // get user profile from database with this userId
+        UserProfile? followingProfile = await _db.getUserFromDatabase(followingId);
+
+        // add to following profile
+        if (followingProfile != null) {
+          followingProfiles.add(followingProfile);
+        }
+      }
+      // update local data
+      _followingProfiles[userId] = followingProfiles;
+
+      // update UI
       notifyListeners();
-
-
-
     }
-
+    // if there are any errors
     catch (e) {
       print(e);
     }

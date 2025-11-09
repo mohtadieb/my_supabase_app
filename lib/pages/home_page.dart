@@ -79,10 +79,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     await databaseProvider.postMessage(message);
   }
 
+  // BUILD UI
   @override
   Widget build(BuildContext context) {
-
-    // BUILD UI
+    // SCAFFOLD
     return Scaffold(
 
       // Floating action button

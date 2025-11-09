@@ -39,13 +39,19 @@ class _MainLayoutState extends State<MainLayout> {
 
   @override
   Widget build(BuildContext context) {
+    final currentPage = _selectedIndex; // however you track it
+    final showAppBar = currentPage != 1; // e.g., hide on Profile tab
+
     return Scaffold(
+
       // AppBar with reduced height
-      appBar: AppBar(
+      appBar: showAppBar
+          ? AppBar(
         centerTitle: true,
         foregroundColor: Theme.of(context).colorScheme.primary,
         toolbarHeight: kToolbarHeight / 2,
-      ),
+      )
+          : null,
 
       // Use IndexedStack to preserve page state
       body: IndexedStack(

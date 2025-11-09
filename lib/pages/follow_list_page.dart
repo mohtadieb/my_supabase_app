@@ -70,10 +70,10 @@ class _FollowListPageState extends State<FollowListPage> {
   Widget build(BuildContext context) {
 
     // listen to followers & following
-    final followers = listeningProvider.getListOfFollowersProfile(
+    final followers = listeningProvider.getListOfFollowerProfiles(
       widget.userId,
     );
-    final following = listeningProvider.getListOfFollowingProfile(
+    final following = listeningProvider.getListOfFollowingProfiles(
       widget.userId,
     );
 
@@ -103,6 +103,8 @@ class _FollowListPageState extends State<FollowListPage> {
             ],
           ),
         ),
+
+        // Tab bar view
         body: TabBarView(
           children: [
             _buildUserList(followers, "No followers.."),

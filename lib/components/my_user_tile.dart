@@ -1,5 +1,5 @@
 /*
-USER LIST TILE (Supabase Ready)
+USER LIST TILE
 
 Displays each user as a tile, for search results, followers, etc.
 */
@@ -20,13 +20,23 @@ class MyUserTile extends StatelessWidget {
     this.customTitle,
   });
 
+  // BUILD UI
   @override
   Widget build(BuildContext context) {
+    // Container
     return Container(
+
+      // Padding outside
       margin: const EdgeInsets.symmetric(horizontal: 28, vertical: 7),
+
+      // Padding inside
       padding: const EdgeInsets.all(7),
+
       decoration: BoxDecoration(
+        // Color of tile
         color: Theme.of(context).colorScheme.secondary,
+
+        // Curve corners
         borderRadius: BorderRadius.circular(7),
       ),
       child: ListTile(
