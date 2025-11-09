@@ -418,69 +418,132 @@ class DatabaseService {
     final currentUserId = _auth.currentUser!.id;
 
     try {
-      await _db.from('follows').insert({
-        'follower_id': currentUserId,
-        'followed_id': targetUserId,
-      });
+      // Get the current user's following list
+      final currentUserRes = await _db
+          .from('profiles')
+          .select('following')
+          .eq('id', currentUserId)
+          .single();
+
+      List<dynamic> following = currentUserRes['following'] ?? [];
+
+      // Add the target user if not already following
+      if (!following.contains(targetUserId)) {
+        following.add(targetUserId);
+
+        await _db.from('profiles').update({'following': following}).eq('id', currentUserId);
+      }
+
+      // Get the target user's followers list
+      final targetUserRes = await _db
+          .from('profiles')
+          .select('followers')
+          .eq('id', targetUserId)
+          .single();
+
+      List<dynamic> followers = targetUserRes['followers'] ?? [];
+
+      // Add the current user if not already in followers
+      if (!followers.contains(currentUserId)) {
+        followers.add(currentUserId);
+
+        await _db.from('profiles').update({'followers': followers}).eq('id', targetUserId);
+      }
+
+      print("✅ Follow successful");
     } catch (e) {
-      print("Error following user: $e");
+      print("❌ Follow error: $e");
     }
   }
 
   /// Unfollow user in database
-  Future<void> unfollowUser(String targetUserId) async {
+  Future<void> unfollowUserInDatabase(String targetUserId) async {
     final currentUserId = _auth.currentUser!.id;
 
     try {
-      await _db
-          .from('follows')
-          .delete()
-          .eq('follower_id', currentUserId)
-          .eq('followed_id', targetUserId);
+      // Get the current user's following list
+      final currentUserRes = await _db
+          .from('profiles')
+          .select('following')
+          .eq('id', currentUserId)
+          .single();
+
+      List<dynamic> following = currentUserRes['following'] ?? [];
+
+      // Remove target user if present
+      following.remove(targetUserId);
+      await _db.from('profiles').update({'following': following}).eq('id', currentUserId);
+
+      // Get the target user's followers list
+      final targetUserRes = await _db
+          .from('profiles')
+          .select('followers')
+          .eq('id', targetUserId)
+          .single();
+
+      List<dynamic> followers = targetUserRes['followers'] ?? [];
+
+      // Remove current user if present
+      followers.remove(currentUserId);
+      await _db.from('profiles').update({'followers': followers}).eq('id', targetUserId);
+
+      print("✅ Unfollow successful");
     } catch (e) {
-      print("Error unfollowing user: $e");
+      print("❌ Unfollow error: $e");
     }
   }
 
-  Future<List<String>> getFollowerUserIds(String userId) async {
+  /// Get followers UserId's from database
+  Future<List<String>> getFollowersFromDatabase(String userId) async {
+
     try {
-      final List data = await _db
-          .from('follows')
-          .select('follower_id')
-          .eq('followed_id', userId);
-      return data.map((e) => e['follower_id'] as String).toList();
+      final response = await _db
+          .from('profiles')
+          .select('followers')
+          .eq('id', userId)
+          .maybeSingle();
+
+      if (response == null || response['followers'] == null) {
+        return [];
+      }
+
+      // Convert dynamic list → List<String>
+      final followers = List<String>.from(response['followers']);
+      print("✅ Followers for $userId: $followers");
+      return followers;
     } catch (e) {
-      print("Error getting followers: $e");
+      print("❌ Error fetching followers: $e");
       return [];
     }
   }
 
-  Future<List<String>> getFollowingUserIds(String userId) async {
+  /// Get following UserId's from database
+  Future<List<String>> getFollowingFromDatabase(String userId) async {
+
     try {
-      final List data = await _db
-          .from('follows')
-          .select('followed_id')
-          .eq('follower_id', userId);
-      return data.map((e) => e['followed_id'] as String).toList();
+      final response = await _db
+          .from('profiles')
+          .select('following')
+          .eq('id', userId)
+          .maybeSingle();
+
+      if (response == null || response['following'] == null) {
+        return [];
+      }
+
+      // Convert dynamic list → List<String>
+      final following = List<String>.from(response['following']);
+      print("✅ Following for $userId: $following");
+      return following;
     } catch (e) {
-      print("Error getting following: $e");
+      print("❌ Error fetching following: $e");
       return [];
     }
   }
-
-  Future<void> removeFollower(String userId) async {
-    final currentUserId = _auth.currentUser!.id;
-
-    await _db.from('followers').delete().match({
-      'follower_id': userId,
-      'following_id': currentUserId,
-    });
-  }
-
 
   /* ==================== DELETE USER ==================== */
   /// Invokes supabase function to delete user data as a batch
-  Future<void> deleteUserData(String userId) async {
+  Future<void> deleteUserDataFromDatabase(String userId) async {
     try {
       final result = await _db.rpc(
         'delete_user_data',

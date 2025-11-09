@@ -50,35 +50,53 @@ class _FollowListPageState extends State<FollowListPage> {
 
   // build user list given a list of profiles
   Widget _buildUserList(List<UserProfile> userList, String emptyMessage) {
-    if (userList.isEmpty) {
-      return Center(child: Text(emptyMessage));
-    }
-
-    return ListView.builder(
-      itemCount: userList.length,
-      itemBuilder: (context, index) {
-        final user = userList[index];
-        return MyUserTile(user: user);
-      },
-    );
+    return userList.isEmpty
+        ?
+          // empty message if there are no users
+          Center(child: Text(emptyMessage))
+        :
+          // user list
+          ListView.builder(
+            itemCount: userList.length,
+            itemBuilder: (context, index) {
+              final user = userList[index];
+              return MyUserTile(user: user);
+            },
+          );
   }
 
+  // BUILD UI
   @override
   Widget build(BuildContext context) {
-    final followers = listeningProvider.getListOfFollowersProfile(widget.userId);
-    final following = listeningProvider.getListOfFollowingProfile(widget.userId);
 
+    // listen to followers & following
+    final followers = listeningProvider.getListOfFollowersProfile(
+      widget.userId,
+    );
+    final following = listeningProvider.getListOfFollowingProfile(
+      widget.userId,
+    );
+
+    // TAB CONTROLLER
     return DefaultTabController(
       length: 2,
+
+      // SCAFFOLD
       child: Scaffold(
         backgroundColor: Theme.of(context).colorScheme.surface,
+
+        // App bar
         appBar: AppBar(
           foregroundColor: Theme.of(context).colorScheme.primary,
+
+          // Tab bar
           bottom: TabBar(
             dividerColor: Colors.transparent,
             labelColor: Theme.of(context).colorScheme.inversePrimary,
             unselectedLabelColor: Theme.of(context).colorScheme.primary,
             indicatorColor: Theme.of(context).colorScheme.secondary,
+
+            // Tabs
             tabs: const [
               Tab(text: "Followers"),
               Tab(text: "Following"),

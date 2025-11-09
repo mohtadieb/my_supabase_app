@@ -100,8 +100,8 @@ class AuthService {
         throw Exception("Invalid password.");
       }
 
-      // 2️⃣ Delete all user data
-      await _db.deleteUserData(user.id);
+      // 2️⃣ Delete all user data from database
+      await _db.deleteUserDataFromDatabase(user.id);
 
       // delete user's auth record
       await deleteMyAccountAuth();

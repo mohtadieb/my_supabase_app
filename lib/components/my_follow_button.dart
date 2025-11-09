@@ -24,19 +24,34 @@ class MyFollowButton extends StatelessWidget {
     required this.isFollowing,
   });
 
+  // BUILD UI
   @override
   Widget build(BuildContext context) {
+
+    // Padding outside
     return Padding(
       padding: const EdgeInsets.all(28),
+
+      // Curve corners
       child: ClipRRect(
         borderRadius: BorderRadius.circular(14), // rounded button corners
+
+        // Material Button
         child: MaterialButton(
-          padding: const EdgeInsets.all(16),
+
+          // Padding inside
+          padding: const EdgeInsets.all(28),
           onPressed: onPressed,
+
           // Button color changes based on follow state
-          color: isFollowing
-              ? Theme.of(context).colorScheme.primary // already following
-              : Colors.blue, // not following yet
+          color:
+          isFollowing
+              ?
+          Theme.of(context).colorScheme.primary // already following
+              :
+          Colors.blue, // not following yet
+
+          // Text
           child: Text(
             isFollowing ? "Unfollow" : "Follow",
             style: TextStyle(

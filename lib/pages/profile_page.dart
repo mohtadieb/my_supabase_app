@@ -32,17 +32,16 @@ class _ProfilePageState extends State<ProfilePage> {
 
   // user info
   UserProfile? user;
-
   String currentUserId = AuthService().getCurrentUserId();
-
-  // DOUBLE CHECK
-  bool _isFollowing = false;
 
   // Text controller for bio
   final bioTextController = TextEditingController();
 
   // loading..
   bool _isLoading = true;
+
+  // isFollowing state
+  bool _isFollowing = false;
 
   // on startup,
   @override
@@ -54,14 +53,16 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> loadUser() async {
+    // get the user profile info
     user = await databaseProvider.getUserProfile(widget.userId);
 
-    //DOUBLE CHECK
-    if (user == null) return;
-    //DOUBLE CHECK
+    // load followers and following for this user
     await databaseProvider.loadUserFollowers(widget.userId);
     await databaseProvider.loadUserFollowing(widget.userId);
+
+    // update following state
     _isFollowing = databaseProvider.isFollowing(widget.userId);
+
 
     // finishes loading
     setState(() {
@@ -99,6 +100,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _toggleFollow() async {
+    // unfollow
     if (_isFollowing) {
       final confirm = await showDialog<bool>(
         context: context,
@@ -106,7 +108,9 @@ class _ProfilePageState extends State<ProfilePage> {
           title: const Text("Unfollow"),
           content: const Text("Are you sure you want to unfollow?"),
           actions: [
+            // cancel button
             TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
+            // yes button
             TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Yes")),
           ],
         ),
@@ -126,13 +130,17 @@ class _ProfilePageState extends State<ProfilePage> {
   // BUILD UI
   @override
   Widget build(BuildContext context) {
-
     // get user posts
     final allUserPosts = listeningProvider.getUserPosts(widget.userId);
 
-    // DOUBLE CHECK
-    final followerCount = databaseProvider.getFollowerCount(widget.userId);
-    final followingCount = databaseProvider.getFollowingCount(widget.userId);
+    // listen to followers & following count
+    final followerCount = listeningProvider.getFollowerCount(widget.userId);
+    final followingCount = listeningProvider.getFollowingCount(widget.userId);
+
+    // listen to is following
+    _isFollowing = listeningProvider.isFollowing(widget.userId);
+
+
 
     //SCAFFOLD
     return Scaffold(
@@ -190,7 +198,7 @@ class _ProfilePageState extends State<ProfilePage> {
           // Profile stats
           MyProfileStats(
             postCount: allUserPosts.length,
-              followerCount: followerCount,
+            followerCount: followerCount,
             followingCount: followingCount,
             onTap: () => Navigator.push(
               context,
@@ -201,8 +209,12 @@ class _ProfilePageState extends State<ProfilePage> {
           const SizedBox(height: 28),
 
           // Follow / Unfollow button
-          if (user!.id != currentUserId)
-            MyFollowButton(onPressed: _toggleFollow, isFollowing: _isFollowing),
+          // only show is the user is viewing someone else's profile
+          if (user!=null && user!.id != currentUserId)
+            MyFollowButton(
+                onPressed: _toggleFollow,
+                isFollowing: _isFollowing
+            ),
 
           // BIO Text
           Padding(

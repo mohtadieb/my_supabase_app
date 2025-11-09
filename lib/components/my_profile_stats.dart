@@ -1,3 +1,19 @@
+/*
+
+PROFILE STATS
+
+This will be displayed on the profile page
+
+--------------------------------------------------------------------------------
+
+Number of
+
+- posts
+- followers
+- following
+
+ */
+
 import 'package:flutter/material.dart';
 
 class MyProfileStats extends StatelessWidget {
@@ -16,12 +32,14 @@ class MyProfileStats extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // style for count
     var textStyleForCount = TextStyle(
       fontSize: 21,
       fontWeight: FontWeight.bold,
       color: Theme.of(context).colorScheme.inversePrimary,
     );
 
+    // style for text
     var textStyleForText = TextStyle(
       fontSize: 14,
       color: Theme.of(context).colorScheme.primary,
@@ -41,7 +59,7 @@ class MyProfileStats extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(postCount.toString(), style: textStyleForCount),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 3),
                   Text("Posts", style: textStyleForText),
                 ],
               ),
@@ -53,7 +71,7 @@ class MyProfileStats extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(followerCount.toString(), style: textStyleForCount),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 3),
                   Text("Followers", style: textStyleForText),
                 ],
               ),
@@ -65,7 +83,7 @@ class MyProfileStats extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(followingCount.toString(), style: textStyleForCount),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 3),
                   Text("Following", style: textStyleForText),
                 ],
               ),
