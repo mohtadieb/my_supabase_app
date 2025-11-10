@@ -37,7 +37,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
   }
 
   /// Opens the confirmation dialog for account deletion
-  void confirmDeletion(BuildContext context) {
+  void _confirmDeletion(BuildContext context) {
     _errorMessage = '';
     _passwordController.clear();
 
@@ -158,7 +158,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
 
           // Delete account button
           GestureDetector(
-            onTap: () => confirmDeletion(context),
+            onTap: () => _confirmDeletion(context),
             child: Container(
               padding: const EdgeInsets.all(28),
               margin: const EdgeInsets.all(28),

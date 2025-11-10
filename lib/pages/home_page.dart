@@ -64,18 +64,28 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         textController: messageController,
         hintText: "What's on your mind?",
         onPressed: () async {
-          // post in database
-          await postMessage(messageController.text.trim());
+          final message = messageController.text.trim();
 
-          messageController.clear();
-        },
+          // Minimum non-space character validation
+          if (message.replaceAll(RegExp(r'\s+'), '').length < 2) {
+            // Show a snackbar or alert
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Your message must have at least 2 characters")),
+            );
+            return;
+          }
+
+          // Post in database
+          await _postMessage(message);
+          },
         onPressedText: "Post",
       ),
     );
   }
 
+
   // user wants to post a message
-  Future<void> postMessage(String message) async {
+  Future<void> _postMessage(String message) async {
     await databaseProvider.postMessage(message);
   }
 

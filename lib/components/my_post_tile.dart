@@ -5,6 +5,7 @@ import '../models/post.dart';
 import '../services/database/database_provider.dart';
 import '../components/my_input_alert_box.dart';
 import '../services/auth/auth_service.dart';
+import 'my_confirmation_box.dart';
 
 /*
 
@@ -79,6 +80,17 @@ class _MyPostTileState extends State<MyPostTile> {
         textController: _commentController,
         hintText: "Type a comment",
         onPressed: () async {
+          final comment = _commentController.text.trim();
+
+          // Require at least 2 non-space characters
+          if (comment.replaceAll(RegExp(r'\s+'), '').length < 2) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              // Show a snackbar or alert
+            const SnackBar(content: Text("Comment must be at least 2 characters")),
+            );
+            return; // Don't post
+          }
+
           await _addComment();
         },
         onPressedText: "Post",
@@ -203,28 +215,19 @@ class _MyPostTileState extends State<MyPostTile> {
   void _reportPostConfirmationBox() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Report Message"),
-        content: const Text("Are you sure you want to report this message?"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: () async {
-              await databaseProvider.reportUser(
-                widget.post.id,
-                widget.post.userId,
-              );
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Message reported!")),
-              );
-            },
-            child: const Text("Report"),
-          ),
-        ],
+      builder: (context) => MyConfirmationBox(
+        title: "Report Message",
+        content: "Are you sure you want to report this message?",
+        confirmText: "Report",
+        onConfirm: () async {
+          await databaseProvider.reportUser(
+            widget.post.id,
+            widget.post.userId,
+          );
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Message reported!")),
+          );
+        },
       ),
     );
   }
@@ -232,24 +235,16 @@ class _MyPostTileState extends State<MyPostTile> {
   void _blockUserConfirmationBox() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Block User"),
-        content: const Text("Are you sure you want to block this user?"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: () async {
-              await databaseProvider.blockUser(widget.post.userId);
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context)
-                  .showSnackBar(const SnackBar(content: Text("User blocked!")));
-            },
-            child: const Text("Block"),
-          ),
-        ],
+      builder: (context) => MyConfirmationBox(
+        title: "Block User",
+        content: "Are you sure you want to block this user?",
+        confirmText: "Block",
+        onConfirm: () async {
+          await databaseProvider.blockUser(widget.post.userId);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("User blocked!")),
+          );
+        },
       ),
     );
   }
