@@ -16,6 +16,8 @@ This class handles all the data from and to supabase
 
  */
 
+import 'dart:io';
+
 import 'package:flutter/cupertino.dart';
 import 'package:my_supabase_app/services/auth/auth_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -27,6 +29,8 @@ class DatabaseService {
   // get instance of supabase
   final _db = Supabase.instance.client;
   final _auth = Supabase.instance.client.auth;
+  late final _storage = _db.storage;
+
 
   /* ==================== USER PROFILE ==================== */
 
@@ -102,46 +106,83 @@ class DatabaseService {
   /* ==================== POSTS ==================== */
 
   /// Create a new post and return the inserted Post object
-  Future<void> postMessageInDatabase(String message) async {
-    // try post message
+  Future<void> postMessageInDatabase(String message, {File? imageFile}) async {
     try {
-      // get current userId
       final currentUserId = _auth.currentUser!.id;
 
-      // Get user profile info
       final user = await getUserFromDatabase(currentUserId);
       if (user == null) throw Exception("User profile not found");
 
-      // Insert post and return the inserted row
+      String? imageUrl;
+
+      // 🆕 If an image was picked, upload it to Supabase Storage
+      if (imageFile != null) {
+        final fileName = '${DateTime.now().millisecondsSinceEpoch}_${currentUserId}.jpg';
+        final storagePath = 'posts/$fileName';
+
+        // Convert file to bytes
+        final bytes = await imageFile.readAsBytes();
+
+        // Upload to Supabase Storage
+        await _db.storage.from('post_images').uploadBinary(storagePath, bytes);
+
+        // Get public URL
+        imageUrl = _db.storage.from('post_images').getPublicUrl(storagePath);
+      }
+
+      // Create new post object
       Post newPost = Post(
         id: '',
         userId: currentUserId,
         name: user.name,
         username: user.username,
         message: message,
+        imageUrl: imageUrl,
         createdAt: DateTime.now().toUtc(),
         likeCount: 0,
         likedBy: [],
       );
 
-      // Convert to Post object to map
-      Map<String, dynamic> newPostMap = newPost.toMap();
+      // Insert post into database
+      await _db.from('posts').insert(newPost.toMap()).select().single();
 
-      // Add post map into database
-      await _db.from('posts').insert(newPostMap).select().single();
-
-      // catch any errors
     } catch (e) {
       print("Error posting message: $e");
     }
   }
 
   /// Delete a post
-  Future<void> deletePostFromDatabase(String postId) async {
+  Future<void> deletePostFromDatabase(String postId, {String? imagePath}) async {
     try {
+      // 1️⃣ Delete image from Supabase Storage if provided
+      if (imagePath != null && imagePath.isNotEmpty) {
+        try {
+          // Extract the relative path inside the bucket
+          // Example: https://xyz.supabase.co/storage/v1/object/public/post_images/my_image.jpg
+          // => we only want: "my_image.jpg" (everything after 'post_images/')
+          final uri = Uri.parse(imagePath);
+          final segments = uri.pathSegments;
+          final bucketIndex = segments.indexOf('post_images');
+          String? pathToDelete;
+          if (bucketIndex != -1 && bucketIndex + 1 < segments.length) {
+            pathToDelete = segments.sublist(bucketIndex + 1).join('/');
+          }
+
+          if (pathToDelete != null && pathToDelete.isNotEmpty) {
+            await _storage.from('post_images').remove([pathToDelete]);
+            print('Image deleted from storage: $pathToDelete');
+          }
+        } catch (e) {
+          print('Error deleting image from storage: $e');
+        }
+      }
+
+      // 2️⃣ Delete post from database
       await _db.from('posts').delete().eq('id', postId);
+      print('Post deleted from database: $postId');
+
     } catch (e) {
-      print("Error deleting post: $e");
+      print("Error deleting post (or image): $e");
     }
   }
 

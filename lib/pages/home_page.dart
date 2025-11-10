@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../models/post.dart';
 import '../services/database/database_provider.dart';
@@ -54,39 +57,75 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     super.dispose();
   }
 
+  File? _selectedImage;
+
   // show post message dialog box
   void _openPostMessageBox() {
     final TextEditingController messageController = TextEditingController();
 
     showDialog(
       context: context,
-      builder: (context) => MyInputAlertBox(
-        textController: messageController,
-        hintText: "What's on your mind?",
-        onPressed: () async {
-          final message = messageController.text.trim();
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => MyInputAlertBox(
+          textController: messageController,
+          hintText: "What's on your mind?",
+          onPressedText: "Post",
+          onPressed: () async {
+            final message = messageController.text.trim();
+            if (message.replaceAll(RegExp(r'\s+'), '').length < 2) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("Your message must have at least 2 characters")),
+              );
 
-          // Minimum non-space character validation
-          if (message.replaceAll(RegExp(r'\s+'), '').length < 2) {
-            // Show a snackbar or alert
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("Your message must have at least 2 characters")),
-            );
-            return;
-          }
+              // 🆕 Clear the selected image after invalid post
+              setState(() {
+                _selectedImage = null;
+              });
+              return;
+            }
 
-          // Post in database
-          await _postMessage(message);
+            // Post the message (with optional image)
+            await _postMessage(message, imageFile: _selectedImage);
+
+            Navigator.pop(context);
           },
-        onPressedText: "Post",
+          extraWidget: Column(
+            children: [
+              // 🆕 Display selected image preview
+              if (_selectedImage != null)
+                Image.file(_selectedImage!, height: 150, fit: BoxFit.cover),
+
+              // 🆕 Button to pick an image
+              TextButton.icon(
+                icon: const Icon(Icons.image),
+                label: const Text("Add Image"),
+                onPressed: () async {
+                  final picker = ImagePicker();
+                  final picked = await picker.pickImage(source: ImageSource.gallery);
+                  if (picked != null) {
+                    setState(() {
+                      _selectedImage = File(picked.path);
+                    });
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
 
   // user wants to post a message
-  Future<void> _postMessage(String message) async {
-    await databaseProvider.postMessage(message);
+  Future<void> _postMessage(String message, {File? imageFile}) async {
+    // Forward both message and optional image to your database provider
+    await databaseProvider.postMessage(message, imageFile: imageFile);
+
+    // 🆕 Clear the selected image after posting
+    setState(() {
+      _selectedImage = null;
+    });
   }
 
   // BUILD UI

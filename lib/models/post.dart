@@ -4,9 +4,10 @@ class Post {
   final String name;
   final String username;
   final String message;
+  final String? imageUrl; // 🆕 optional image
   final DateTime createdAt;
   final int likeCount;
-  final List<String> likedBy; // list of user IDs who liked
+  final List<String> likedBy;
 
   Post({
     required this.id,
@@ -14,12 +15,12 @@ class Post {
     required this.name,
     required this.username,
     required this.message,
+    this.imageUrl, // 🆕
     required this.createdAt,
     required this.likeCount,
     required this.likedBy,
   });
 
-  // ✅ Convert from Supabase record → Dart object
   factory Post.fromMap(Map<String, dynamic> map) {
     return Post(
       id: map['id'].toString(),
@@ -27,34 +28,32 @@ class Post {
       name: map['name'] ?? '',
       username: map['username'] ?? '',
       message: map['message'] ?? '',
+      imageUrl: map['image_url'], // 🆕
       createdAt: DateTime.parse(map['created_at']).toLocal(),
       likeCount: map['like_count'] ?? 0,
       likedBy: List<String>.from(map['liked_by'] ?? []),
     );
   }
 
-  // ✅ Convert Dart object → insert/update map
   Map<String, dynamic> toMap() {
     final map = {
       'user_id': userId,
       'name': name,
       'username': username,
       'message': message,
+      'image_url': imageUrl, // 🆕
       'created_at': createdAt.toIso8601String(),
       'like_count': likeCount,
       'liked_by': likedBy,
     };
-
-    // ⚙️ include id only if it's a valid (non-empty) value
     if (id.isNotEmpty) map['id'] = id;
-
     return map;
   }
 
-  // ✅ Useful for local updates
   Post copyWith({
     String? id,
     String? message,
+    String? imageUrl, // 🆕
     int? likeCount,
     List<String>? likedBy,
   }) {
@@ -64,6 +63,7 @@ class Post {
       name: name,
       username: username,
       message: message ?? this.message,
+      imageUrl: imageUrl ?? this.imageUrl, // 🆕
       createdAt: createdAt,
       likeCount: likeCount ?? this.likeCount,
       likedBy: likedBy ?? this.likedBy,

@@ -17,6 +17,8 @@ the it's much easier to manage and switch out different databases.
 
 */
 
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/comment.dart';
@@ -51,10 +53,11 @@ class DatabaseProvider extends ChangeNotifier {
 
 
   /// post message
-  Future<void> postMessage(String message) async {
-    // post message in database
-    await _db.postMessageInDatabase(message);
+  Future<void> postMessage(String message, {File? imageFile}) async {
+    // Forward message and optional image to database service
+    await _db.postMessageInDatabase(message, imageFile: imageFile);
 
+    // Reload all posts after posting
     await loadAllPosts();
   }
 
@@ -118,15 +121,22 @@ class DatabaseProvider extends ChangeNotifier {
   }
 
   /// delete post
-  Future<void> deletePost(String postId) async {
+  /// Deletes a post along with its image (if any).
+  ///
+  /// We pass the full `Post` object so that we can access both the post ID
+  /// and the optional image URL for deletion in Supabase Storage.
+  Future<void> deletePost(Post post) async {
     try {
-      // Call the service to delete from database
-      await _db.deletePostFromDatabase(postId);
+      // 1️⃣ Call the service to delete from database and storage
+      await _db.deletePostFromDatabase(
+        post.id,
+        imagePath: post.imageUrl, // optional, may be null
+      );
 
-      // // Update local state
-      // _allPosts.removeWhere((post) => post.id == postId);
+      // 2️⃣ Update local state: remove the post from _allPosts list
+      _allPosts.removeWhere((p) => p.id == post.id);
 
-      // reload data from database (notifies listeners)
+      // 3️⃣ Reload posts from database to notify listeners
       await loadAllPosts();
 
     } catch (e) {

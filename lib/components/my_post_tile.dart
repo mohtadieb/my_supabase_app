@@ -86,7 +86,7 @@ class _MyPostTileState extends State<MyPostTile> {
           if (comment.replaceAll(RegExp(r'\s+'), '').length < 2) {
             ScaffoldMessenger.of(context).showSnackBar(
               // Show a snackbar or alert
-            const SnackBar(content: Text("Comment must be at least 2 characters")),
+              const SnackBar(content: Text("Comment must be at least 2 characters")),
             );
             return; // Don't post
           }
@@ -119,21 +119,7 @@ class _MyPostTileState extends State<MyPostTile> {
     await databaseProvider.loadComments(widget.post.id);
   }
 
-  /*
-
-  SHOW OPTIONS
-
-  Case 1: This post belongs to current user
-  - Delete
-  - Cancel
-
-  Case 2: This post does not belong to current user
-  - Report
-  - Block
-  - Cancel
-
-   */
-
+  // SHOW OPTIONS
   void _showOptions() {
     final currentUserId = AuthService().getCurrentUserId();
     final isOwnPost = widget.post.userId == currentUserId;
@@ -171,7 +157,7 @@ class _MyPostTileState extends State<MyPostTile> {
 
                   // If confirmed, delete post
                   if (confirm == true) {
-                    await databaseProvider.deletePost(widget.post.id);
+                    await databaseProvider.deletePost(widget.post);
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text("Post deleted!")),
                     );
@@ -210,7 +196,6 @@ class _MyPostTileState extends State<MyPostTile> {
       ),
     );
   }
-
 
   void _reportPostConfirmationBox() {
     showDialog(
@@ -333,7 +318,9 @@ class _MyPostTileState extends State<MyPostTile> {
                         ),
                       ],
                     ),
+
                     const SizedBox(height: 14),
+
                     Text(
                       widget.post.message,
                       style: TextStyle(
@@ -341,9 +328,41 @@ class _MyPostTileState extends State<MyPostTile> {
                         fontSize: 15,
                       ),
                     ),
+
+                    // 🆕 Display post image if exists
+                    if (widget.post.imageUrl != null) ...[
+                      const SizedBox(height: 10),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: SizedBox(
+                          // 🆕 constrain image height to avoid overflow
+                          height: 250,
+                          width: double.infinity,
+                          child: Image.network(
+                            widget.post.imageUrl!,
+                            fit: BoxFit.cover,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Center(
+                                child: CircularProgressIndicator(
+                                  value: loadingProgress.expectedTotalBytes != null
+                                      ? loadingProgress.cumulativeBytesLoaded /
+                                      loadingProgress.expectedTotalBytes!
+                                      : null,
+                                ),
+                              );
+                            },
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Center(child: Text('Failed to load image'));
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
+
               Container(
                 color: Theme.of(context).colorScheme.secondary,
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
