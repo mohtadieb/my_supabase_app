@@ -1,10 +1,11 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../helper/time_ago_text.dart';
 import '../models/post.dart';
 import '../services/database/database_provider.dart';
 import '../components/my_input_alert_box.dart';
 import '../services/auth/auth_service.dart';
+
 /*
 
 POST TILE
@@ -16,7 +17,7 @@ All posts will be displayed using this post tile widget.
 To use this widget, you need:
 
 - The post
-- a function for onPostTap (to go the individual post to see it's comments)
+- a function for onPostTap (to go the individual post to see its comments)
 - a function for onUserTap (to go to user's profile page)
 
 */
@@ -48,27 +49,15 @@ class _MyPostTileState extends State<MyPostTile> {
   // comment text controller
   final _commentController = TextEditingController();
 
-  // DOUBLE CHECK
-  late Timer _timer;
-
-  // DOUBLE CHECK
   @override
   void initState() {
     super.initState();
-
     // load comments for this post
     _loadComments();
-
-    // Auto-update "time ago" every minute
-    _timer = Timer.periodic(const Duration(minutes: 1), (_) {
-      if (mounted) setState(() {});
-    });
   }
 
-  // DOUBLE CHECK
   @override
   void dispose() {
-    _timer.cancel();
     _commentController.dispose();
     super.dispose();
   }
@@ -90,7 +79,6 @@ class _MyPostTileState extends State<MyPostTile> {
         textController: _commentController,
         hintText: "Type a comment",
         onPressed: () async {
-          // add comment in database
           await _addComment();
         },
         onPressedText: "Post",
@@ -100,10 +88,8 @@ class _MyPostTileState extends State<MyPostTile> {
 
   // user tapped post to add comment
   Future<void> _addComment() async {
-    // does nothing if there is nothing in the textfield
     if (_commentController.text.trim().isEmpty) return;
 
-    // attempt to post comment
     try {
       await databaseProvider.addComment(
         widget.post.id,
@@ -136,66 +122,72 @@ class _MyPostTileState extends State<MyPostTile> {
 
    */
 
-  // Show options for post
   void _showOptions() {
     final currentUserId = AuthService().getCurrentUserId();
     final isOwnPost = widget.post.userId == currentUserId;
 
-    // show options
     showModalBottomSheet(
       context: context,
       builder: (context) => SafeArea(
         child: Wrap(
           children: [
-            isOwnPost
-            // THIS POST BELONGS TO USER
-                ?
-            // Delete button
-            ListTile(
-              leading: const Icon(Icons.delete),
-              title: const Text("Delete"),
-              onTap: () async {
-                // pop option box
-                Navigator.pop(context);
+            if (isOwnPost)
+              ListTile(
+                leading: const Icon(Icons.delete),
+                title: const Text("Delete"),
+                onTap: () async {
+                  Navigator.pop(context); // Close bottom sheet first
 
-                // handle delete action
-                await databaseProvider.deletePost(widget.post.id);
-              },
-            )
-            // THIS POST DOES NOT BELONG TO USER
-                :
-            // Report button
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.report),
-                  title: const Text("Report"),
-                  onTap: () {
-                    // pop option box
-                    Navigator.pop(context);
+                  // Show confirmation dialog
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text("Delete Post"),
+                      content: const Text("Are you sure you want to delete this post?"),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text("Cancel"),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: const Text("Delete"),
+                        ),
+                      ],
+                    ),
+                  );
 
-                    // handle report action
-                    _reportPostConfirmationBox();
-                  },
-                ),
-
-                // block user button
-                ListTile(
-                  leading: const Icon(Icons.block),
-                  title: const Text("Block"),
-                  onTap: () {
-                    // pop option box
-                    Navigator.pop(context);
-
-                    // handle block action
-                    _blockUserConfirmationBox();
-                  },
-                ),
-              ],
-            ),
-
-            // Always show cancel
+                  // If confirmed, delete post
+                  if (confirm == true) {
+                    await databaseProvider.deletePost(widget.post.id);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Post deleted!")),
+                    );
+                  }
+                },
+              )
+            else
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.report),
+                    title: const Text("Report"),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _reportPostConfirmationBox();
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.block),
+                    title: const Text("Block"),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _blockUserConfirmationBox();
+                    },
+                  ),
+                ],
+              ),
             ListTile(
               leading: const Icon(Icons.cancel),
               title: const Text("Cancel"),
@@ -207,7 +199,7 @@ class _MyPostTileState extends State<MyPostTile> {
     );
   }
 
-  // Report post confirmation
+
   void _reportPostConfirmationBox() {
     showDialog(
       context: context,
@@ -215,25 +207,17 @@ class _MyPostTileState extends State<MyPostTile> {
         title: const Text("Report Message"),
         content: const Text("Are you sure you want to report this message?"),
         actions: [
-          // cancel button
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text("Cancel"),
           ),
-
-          // report button
           TextButton(
             onPressed: () async {
-              // report user
               await databaseProvider.reportUser(
                 widget.post.id,
                 widget.post.userId,
               );
-
-              // close the box
               Navigator.pop(context);
-
-              // let the user know it was successful
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text("Message reported!")),
               );
@@ -245,7 +229,6 @@ class _MyPostTileState extends State<MyPostTile> {
     );
   }
 
-  // block user confirmation
   void _blockUserConfirmationBox() {
     showDialog(
       context: context,
@@ -259,37 +242,16 @@ class _MyPostTileState extends State<MyPostTile> {
           ),
           TextButton(
             onPressed: () async {
-              // block user
               await databaseProvider.blockUser(widget.post.userId);
-
-              // close box
               Navigator.pop(context);
-
-              // let the user know block was successful
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text("User blocked!")));
+              ScaffoldMessenger.of(context)
+                  .showSnackBar(const SnackBar(content: Text("User blocked!")));
             },
             child: const Text("Block"),
           ),
         ],
       ),
     );
-  }
-
-  // DOUBLE CHECK
-  String timeAgo(DateTime createdAt) {
-    // Convert both to UTC to avoid timezone drift
-    final now = DateTime.now().toUtc();
-    final diff = DateTime.now().difference(createdAt); // already local
-    final safeDiff = diff.isNegative ? Duration.zero : diff;
-
-    if (diff.inSeconds < 60) return 'Just now';
-    if (safeDiff.inMinutes < 60) return '${safeDiff.inMinutes}m ago';
-    if (safeDiff.inHours < 24) return '${safeDiff.inHours}h ago';
-    if (safeDiff.inDays < 7) return '${safeDiff.inDays}d ago';
-
-    return '${createdAt.day}/${createdAt.month}/${createdAt.year}';
   }
 
   // BUILD UI
@@ -307,19 +269,17 @@ class _MyPostTileState extends State<MyPostTile> {
     int commentCount = listeningProvider.getComments(widget.post.id).length;
 
     return GestureDetector(
-      // tapping anywhere on the post container triggers onPostTap
       onTap: widget.onPostTap,
       child: Center(
         child: Container(
           margin: const EdgeInsets.symmetric(vertical: 7, horizontal: 14),
           padding: const EdgeInsets.all(7),
           decoration: BoxDecoration(
-            // Color of post tile top
             color: Theme.of(context).colorScheme.secondary,
             borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
-                color: Color.fromRGBO(0, 0, 0, 0.05),
+                color: const Color.fromRGBO(0, 0, 0, 0.05),
                 blurRadius: 7,
                 offset: const Offset(0, 2),
               ),
@@ -336,44 +296,31 @@ class _MyPostTileState extends State<MyPostTile> {
                     // Row: Profile picture + Name/Username + Options
                     Row(
                       children: [
-                        // Wrap profile picture + name/username together for onUserTap
                         GestureDetector(
                           onTap: widget.onUserTap,
                           child: Row(
                             children: [
-                              // Profile picture
                               Icon(
                                 Icons.person,
                                 color: Theme.of(context).colorScheme.primary,
                                 size: 40,
                               ),
-
                               const SizedBox(width: 7),
-
-                              // Name & Username
                               Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  // Name
                                   Text(
                                     widget.post.name,
                                     style: TextStyle(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .primary,
+                                      color: Theme.of(context).colorScheme.primary,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
-
                                   const SizedBox(width: 7),
-
-                                  // Username
                                   Text(
                                     '@${widget.post.username}',
                                     style: TextStyle(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .primary,
+                                      color: Theme.of(context).colorScheme.primary,
                                     ),
                                   ),
                                 ],
@@ -381,10 +328,7 @@ class _MyPostTileState extends State<MyPostTile> {
                             ],
                           ),
                         ),
-
                         const Spacer(),
-
-                        // Options button
                         GestureDetector(
                           onTap: _showOptions,
                           child: Icon(
@@ -394,61 +338,43 @@ class _MyPostTileState extends State<MyPostTile> {
                         ),
                       ],
                     ),
-
                     const SizedBox(height: 14),
-
-                    // Post message
                     Text(
                       widget.post.message,
                       style: TextStyle(
-                        color:
-                        Theme.of(context).colorScheme.inversePrimary,
+                        color: Theme.of(context).colorScheme.inversePrimary,
                         fontSize: 15,
                       ),
                     ),
                   ],
                 ),
               ),
-
-              // Like / Comment / Timestamp Row
               Container(
                 color: Theme.of(context).colorScheme.secondary,
-                padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-
-                // Buttons -> Like / Comment + Timestamp
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                 child: Row(
                   children: [
-                    // Like Button
                     GestureDetector(
                       onTap: _toggleLikePost,
                       child: likedByCurrentUser
                           ? const Icon(Icons.favorite, color: Colors.red)
                           : Icon(
                         Icons.favorite_border,
-                        color:
-                        Theme.of(context).colorScheme.primary,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
-
                     const SizedBox(width: 1),
-
-                    // Like count
                     SizedBox(
                       width: 21,
                       child: Text(
                         likeCount != 0 ? likeCount.toString() : '',
                         style: TextStyle(
-                          color:
-                          Theme.of(context).colorScheme.primary,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                         textAlign: TextAlign.center,
                       ),
                     ),
-
                     const SizedBox(width: 14),
-
-                    // Comment Button
                     GestureDetector(
                       onTap: _openNewCommentBox,
                       child: Icon(
@@ -456,27 +382,21 @@ class _MyPostTileState extends State<MyPostTile> {
                         color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
-
                     const SizedBox(width: 1),
-
-                    // Comment count
                     SizedBox(
                       width: 21,
                       child: Text(
                         commentCount != 0 ? commentCount.toString() : '',
                         style: TextStyle(
-                          color:
-                          Theme.of(context).colorScheme.primary,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                         textAlign: TextAlign.center,
                       ),
                     ),
-
                     const Spacer(),
-
-                    // Timestamp
-                    Text(
-                      timeAgo(widget.post.createdAt),
+                    // Timestamp using TimeAgoText helper
+                    TimeAgoText(
+                      createdAt: widget.post.createdAt,
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.primary,
                       ),

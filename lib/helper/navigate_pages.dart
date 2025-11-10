@@ -51,10 +51,10 @@ void goHomePage(BuildContext context) {
 }
 
 void goMainLayout(BuildContext context) {
-  Navigator.pushAndRemoveUntil(
+  Navigator.pushNamedAndRemoveUntil(
     context,
-    MaterialPageRoute(builder: (_) => const MainLayout()),
-        (route) => false,
+    '/',
+        (route) => false, // removes everything before it
   );
 
 }

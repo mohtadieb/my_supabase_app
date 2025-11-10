@@ -557,14 +557,27 @@ class DatabaseService {
   }
 
   /* ==================== SEARCH USERS ==================== */
-  Future<List<UserProfile>> searchUsers(String searchTerm) async {
+  Future<List<UserProfile>> searchUsersInDatabase(String searchTerm) async {
     if (searchTerm.isEmpty) return [];
+
+    // Prevent wildcard abuse (e.g. * * * returning all users)
+    if (RegExp(r'^[*]+$').hasMatch(searchTerm)) return [];
 
     try {
       final List data = await _db
           .from('profiles')
           .select()
-          .ilike('username', '%$searchTerm%');
+          .or('username.ilike.${searchTerm}%,name.ilike.${searchTerm}%');
+
+      // Sort results so exact or prefix matches appear first
+      data.sort((a, b) {
+        final nameA = (a['username'] as String).toLowerCase();
+        final nameB = (b['username'] as String).toLowerCase();
+        final term = searchTerm.toLowerCase();
+        final startsA = nameA.startsWith(term) ? 0 : 1;
+        final startsB = nameB.startsWith(term) ? 0 : 1;
+        return startsA.compareTo(startsB);
+      });
 
       return data.map((e) => UserProfile.fromMap(e)).toList();
     } catch (e) {

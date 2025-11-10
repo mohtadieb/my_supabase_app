@@ -59,7 +59,6 @@ class DatabaseProvider extends ChangeNotifier {
   }
 
   /// fetch all posts
-  // DOUBLE CHECK
   Future<void> loadAllPosts() async {
     try {
       //Fetch all posts from database
@@ -623,7 +622,7 @@ class DatabaseProvider extends ChangeNotifier {
     }
 
     try {
-      final results = await _db.searchUsers(searchTerm); // call service
+      final results = await _db.searchUsersInDatabase(searchTerm); // call service
       final currentUserId = _auth.getCurrentUserId();
 
       // Filter out current user
@@ -640,7 +639,7 @@ class DatabaseProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // /* ==================== LOG OUT ==================== */
+  /* ==================== LOG OUT ==================== */
   // void clearAllCachedData() {
   //   _currentUser = null;
   //   _allPosts.clear();

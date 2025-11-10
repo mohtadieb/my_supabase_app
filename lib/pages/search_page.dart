@@ -13,6 +13,12 @@ class SearchPage extends StatefulWidget {
 }
 
 class _SearchPageState extends State<SearchPage> {
+  // providers
+  late final databaseProvider =
+  Provider.of<DatabaseProvider>(context, listen: false);
+  late final listeningProvider = Provider.of<DatabaseProvider>(context);
+
+
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounce;
   bool _isSearching = false;
@@ -26,7 +32,6 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   void _onSearchChanged(String value) {
-    final databaseProvider = Provider.of<DatabaseProvider>(context, listen: false);
 
     if (_debounce?.isActive ?? false) _debounce!.cancel();
 
@@ -54,60 +59,89 @@ class _SearchPageState extends State<SearchPage> {
 
   @override
   Widget build(BuildContext context) {
-    final databaseProvider = Provider.of<DatabaseProvider>(context);
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.surface,
+        backgroundColor: colorScheme.surface,
         elevation: 0,
-        leading: (_searchController.text.isNotEmpty || _hasSearched)
-            ? IconButton(
-          icon: Icon(Icons.arrow_back,
-              color: Theme.of(context).colorScheme.primary),
-          onPressed: () {
-            _searchController.clear();
-            databaseProvider.clearSearchResults();
-            setState(() {
-              _hasSearched = false;
-            });
-          },
-        )
-            : null,
-        title: TextField(
-          controller: _searchController,
-          style: TextStyle(color: Theme.of(context).colorScheme.primary),
-          decoration: InputDecoration(
-            hintText: "Search users...",
-            hintStyle: TextStyle(
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.6),
-            ),
-            border: InputBorder.none,
+        centerTitle: true,
+        automaticallyImplyLeading: false,
+        title: Container(
+          height: 38,
+          decoration: BoxDecoration(
+            color: colorScheme.secondary,
+            borderRadius: BorderRadius.circular(25),
           ),
-          onChanged: (value) {
-            _onSearchChanged(value);
-            setState(() {}); // refresh to toggle back button visibility
-          },
+          child: Row(
+            children: [
+              const SizedBox(width: 10),
+
+              // Search icon
+              Icon(Icons.search, color: colorScheme.primary.withOpacity(0.7)),
+
+              const SizedBox(width: 6),
+
+              // Text field
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  style: TextStyle(color: colorScheme.primary),
+                  cursorColor: colorScheme.primary,
+                  decoration: InputDecoration(
+                    hintText: "Search",
+                    hintStyle: TextStyle(
+                      color: colorScheme.primary.withOpacity(0.6),
+                    ),
+                    border: InputBorder.none,
+                  ),
+                  onChanged: (value) {
+                    _onSearchChanged(value);
+                    setState(() {}); // refresh to toggle back button visibility
+                  },
+                ),
+              ),
+
+              // Clear button (only visible if text not empty)
+              if (_searchController.text.isNotEmpty)
+                GestureDetector(
+                  onTap: () {
+                    _searchController.clear();
+                    listeningProvider.clearSearchResults();
+                    setState(() {
+                      _hasSearched = false;
+                    });
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: Icon(Icons.close,
+                        color: colorScheme.primary.withOpacity(0.6), size: 18),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
       body: _isSearching
           ? Center(
         child: Text(
           "Searching...",
-          style: TextStyle(color: Theme.of(context).colorScheme.primary),
+          style: TextStyle(color: colorScheme.primary),
         ),
       )
-          : (_hasSearched && databaseProvider.searchResults.isEmpty)
+          : (_hasSearched && listeningProvider.searchResults.isEmpty)
           ? Center(
         child: Text(
           "No users found...",
-          style: TextStyle(color: Theme.of(context).colorScheme.primary),
+          style: TextStyle(color: colorScheme.primary),
         ),
       )
           : ListView.builder(
-        itemCount: databaseProvider.searchResults.length,
+        itemCount: listeningProvider.searchResults.length,
         itemBuilder: (context, index) {
-          final UserProfile user = databaseProvider.searchResults[index];
+          final UserProfile user =
+          listeningProvider.searchResults[index];
           return MyUserTile(
             user: user,
             customTitle: user.name,

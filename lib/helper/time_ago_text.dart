@@ -1,11 +1,23 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 
+/*
+TIME AGO TEXT
+
+Displays a "time ago" string like:
+- Just now
+- 10s ago
+- 5m ago
+- 3h ago
+- 2d ago
+- or full date if older than a week
+*/
+
 class TimeAgoText extends StatefulWidget {
-  /// The createdAt DateTime from Supabase (already a DateTime object)
+  /// The createdAt DateTime from Supabase
   final DateTime createdAt;
 
-  /// Optional TextStyle for customization
+  /// Optional TextStyle
   final TextStyle? style;
 
   const TimeAgoText({
@@ -19,16 +31,12 @@ class TimeAgoText extends StatefulWidget {
 }
 
 class _TimeAgoTextState extends State<TimeAgoText> {
-  late DateTime createdAtUtc;
   late Timer _timer;
 
   @override
   void initState() {
     super.initState();
-    // Convert to UTC once for safe comparison
-    createdAtUtc = widget.createdAt.toUtc();
-
-    // Timer to update the text every 30 seconds
+    // Timer updates the text every 30 seconds
     _timer = Timer.periodic(const Duration(seconds: 30), (_) {
       if (mounted) setState(() {});
     });
@@ -41,23 +49,21 @@ class _TimeAgoTextState extends State<TimeAgoText> {
   }
 
   String getTimeAgo() {
-    final nowUtc = DateTime.now().toUtc();
-    final diff = nowUtc.difference(createdAtUtc);
+    final now = DateTime.now().toUtc();
+    final diff = now.difference(widget.createdAt.toUtc());
 
-    if (diff.inSeconds < 60) return '${diff.inSeconds}s';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m';
-    if (diff.inHours < 24) return '${diff.inHours}h';
-    if (diff.inDays < 7) return '${diff.inDays}d';
+    if (diff.inSeconds < 5) return 'Just now';
+    if (diff.inSeconds < 60) return '${diff.inSeconds}s ago';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
 
     // Older than a week, show full date
-    return '${createdAtUtc.day}/${createdAtUtc.month}/${createdAtUtc.year}';
+    return '${widget.createdAt.day}/${widget.createdAt.month}/${widget.createdAt.year}';
   }
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      getTimeAgo(),
-      style: widget.style,
-    );
+    return Text(getTimeAgo(), style: widget.style);
   }
 }

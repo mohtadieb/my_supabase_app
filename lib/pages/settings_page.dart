@@ -32,7 +32,7 @@ class _SettingsPageState extends State<SettingsPage> {
   final AuthService _auth = AuthService(); // Auth logic
 
   // Database provider
-  //late final databaseProvider = Provider.of<DatabaseProvider>(context, listen: false,);
+  // late final databaseProvider = Provider.of<DatabaseProvider>(context, listen: false,);
 
   /// Handles logout via AuthService
   Future<void> logout() async {
@@ -42,9 +42,12 @@ class _SettingsPageState extends State<SettingsPage> {
       // Logout from Supabase
       await _auth.logout();
 
+      // if(mounted) Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+
+
       // Clear any cached user data in provider
 
-      //databaseProvider.clearAllCachedData();
+      // databaseProvider.clearAllCachedData();
 
       // Show success feedback
       if (mounted) {
