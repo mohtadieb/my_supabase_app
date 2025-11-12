@@ -22,6 +22,7 @@ import 'package:provider/provider.dart';
 import '../models/comment.dart';
 import '../services/auth/auth_service.dart';
 import '../services/database/database_provider.dart';
+import 'my_confirmation_box.dart';
 
 class MyCommentTile extends StatefulWidget {
   final Comment comment;
@@ -84,9 +85,7 @@ class _MyCommentTileState extends State<MyCommentTile> {
                   onTap: () {
                     // pop option box
                     Navigator.pop(context);
-
-                    // TODO: implement report comment
-                  },
+                    _reportPostConfirmationBox();                  },
                 ),
 
                 // block user button
@@ -95,10 +94,8 @@ class _MyCommentTileState extends State<MyCommentTile> {
                   title: const Text("Block"),
                   onTap: () {
                     // pop option box
-
                     Navigator.pop(context);
-                    // TODO: implement block user
-                  },
+                    _blockUserConfirmationBox();                  },
                 ),
               ],
 
@@ -112,6 +109,43 @@ class _MyCommentTileState extends State<MyCommentTile> {
           ),
         );
       },
+    );
+  }
+
+  void _reportPostConfirmationBox() {
+    showDialog(
+      context: context,
+      builder: (context) => MyConfirmationBox(
+        title: "Report Message",
+        content: "Are you sure you want to report this message?",
+        confirmText: "Report",
+        onConfirm: () async {
+          await databaseProvider.reportUser(
+            widget.comment.id,
+            widget.comment.userId,
+          );
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Message reported!")),
+          );
+        },
+      ),
+    );
+  }
+
+  void _blockUserConfirmationBox() {
+    showDialog(
+      context: context,
+      builder: (context) => MyConfirmationBox(
+        title: "Block User",
+        content: "Are you sure you want to block this user?",
+        confirmText: "Block",
+        onConfirm: () async {
+          await databaseProvider.blockUser(widget.comment.userId);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("User blocked!")),
+          );
+        },
+      ),
     );
   }
 
