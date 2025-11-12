@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_supabase_app/pages/profile_page.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -36,6 +37,8 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final _auth = Supabase.instance.client.auth;
+
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
@@ -44,6 +47,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/': (context) => const AuthGate(),
         '/home': (context) => const HomePage(),
+        '/profile': (context) => ProfilePage(userId: _auth.currentUser!.id,),
         '/search': (context) => const SearchPage(),
         '/settings': (context) => SettingsPage(),
       },

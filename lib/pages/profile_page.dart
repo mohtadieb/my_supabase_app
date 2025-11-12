@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_supabase_app/pages/settings_page.dart';
 import 'package:provider/provider.dart';
 
 import '../components/my_bio_box.dart';
@@ -11,6 +12,8 @@ import '../models/user.dart';
 import '../services/auth/auth_service.dart';
 import '../services/database/database_provider.dart';
 import 'follow_list_page.dart';
+import 'package:flutter/cupertino.dart';
+
 
 /*
 PROFILE PAGE (Supabase Ready)
@@ -148,15 +151,22 @@ class _ProfilePageState extends State<ProfilePage> {
 
       // App bar
       appBar: AppBar(
-
-        // Username handle
         title: Text(_isLoading ? '' : user!.name),
         foregroundColor: Theme.of(context).colorScheme.primary,
         centerTitle: true,
-        // leading: IconButton(
-        //     icon: const Icon(Icons.arrow_back),
-        //     onPressed: () => goMainLayout(context),
-        //     ),
+        actions: [
+          // Only show settings icon when viewing your own profile
+          if (!_isLoading && user!.id == currentUserId)
+            IconButton(
+              icon: const Icon(Icons.settings),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  CupertinoPageRoute(builder: (context) => const SettingsPage()),
+                );
+              },
+            ),
+        ],
       ),
 
       // Body
@@ -233,7 +243,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 if (user!.id == currentUserId)
                   GestureDetector(
                     onTap: _showEditBioBox,
-                    child: Icon(Icons.settings, color: Theme.of(context).colorScheme.primary),
+                    child: Icon(Icons.edit, color: Theme.of(context).colorScheme.primary),
                   ),
               ],
             ),

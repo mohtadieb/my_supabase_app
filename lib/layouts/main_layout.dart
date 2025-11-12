@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../pages/friends_page.dart';
 import '../pages/home_page.dart';
 import '../pages/profile_page.dart';
 import '../pages/search_page.dart';
@@ -25,9 +26,9 @@ class _MainLayoutState extends State<MainLayout> {
     _auth.getCurrentUserId();
     _pages = [
       const HomePage(),
-      ProfilePage(userId: _auth.getCurrentUserId()), // dynamic current user
       const SearchPage(),
-      SettingsPage(),
+      FriendsPage(),
+      ProfilePage(userId: _auth.getCurrentUserId()), // dynamic current user
     ];
   }
 
@@ -40,7 +41,7 @@ class _MainLayoutState extends State<MainLayout> {
   @override
   Widget build(BuildContext context) {
     final currentPage = _selectedIndex; // however you track it
-    final showAppBar = currentPage != 1; // e.g., hide on Profile tab
+    final showAppBar = currentPage != 3; // e.g., hide on Profile tab
 
     return Scaffold(
 
@@ -66,9 +67,9 @@ class _MainLayoutState extends State<MainLayout> {
         type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
           BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
+          BottomNavigationBarItem(icon: Icon(Icons.group), label: 'Friends'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
     );

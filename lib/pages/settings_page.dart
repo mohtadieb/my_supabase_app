@@ -96,6 +96,7 @@ class _SettingsPageState extends State<SettingsPage> {
       children: [
         Scaffold(
           backgroundColor: Theme.of(context).colorScheme.surface,
+          appBar: AppBar(),
 
           // Body
           body: SafeArea(
